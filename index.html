@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Where I've Been — Interactive Visited Map</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      overflow: hidden;
+    }
+
+    header {
+      text-align: center;
+      padding: 12px 20px 8px;
+      width: 100%;
+      z-index: 10;
+      background: rgba(26, 26, 46, 0.95);
+    }
+
+    header h1 {
+      font-size: 1.4rem;
+      font-weight: 600;
+      color: #e0e0e0;
+      letter-spacing: 0.5px;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      padding: 8px 20px;
+      flex-wrap: wrap;
+      background: rgba(26, 26, 46, 0.95);
+      z-index: 10;
+      width: 100%;
+    }
+
+    .toolbar label {
+      font-size: 0.85rem;
+      color: #aaa;
+    }
+
+    .map-tabs {
+      display: flex;
+      gap: 4px;
+    }
+
+    .map-tabs button {
+      padding: 6px 16px;
+      border: 1px solid #444;
+      background: transparent;
+      color: #ccc;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: all 0.2s;
+    }
+
+    .map-tabs button.active {
+      background: #4a6fa5;
+      color: #fff;
+      border-color: #4a6fa5;
+    }
+
+    .map-tabs button:hover:not(.active) {
+      background: #333;
+    }
+
+    .color-picker-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .color-picker-wrapper input[type="color"] {
+      width: 32px;
+      height: 32px;
+      border: 2px solid #555;
+      border-radius: 4px;
+      cursor: pointer;
+      background: none;
+      padding: 0;
+    }
+
+    .color-picker-wrapper input[type="color"]::-webkit-color-swatch-wrapper {
+      padding: 2px;
+    }
+
+    .color-picker-wrapper input[type="color"]::-webkit-color-swatch {
+      border: none;
+      border-radius: 2px;
+    }
+
+    .preset-colors {
+      display: flex;
+      gap: 4px;
+    }
+
+    .preset-color {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+
+    .preset-color:hover, .preset-color.active {
+      border-color: #fff;
+      transform: scale(1.15);
+    }
+
+    .btn {
+      padding: 6px 14px;
+      border: 1px solid #444;
+      background: transparent;
+      color: #ccc;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      transition: all 0.2s;
+    }
+
+    .btn:hover {
+      background: #333;
+    }
+
+    .btn-primary {
+      background: #4a6fa5;
+      color: #fff;
+      border-color: #4a6fa5;
+    }
+
+    .btn-primary:hover {
+      background: #3a5f95;
+    }
+
+    .btn-danger {
+      border-color: #a54a4a;
+      color: #e08080;
+    }
+
+    .btn-danger:hover {
+      background: #3a1a1a;
+    }
+
+    .map-container {
+      flex: 1;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+      cursor: grab;
+    }
+
+    .map-container:active {
+      cursor: grabbing;
+    }
+
+    .map-container svg {
+      max-width: 100%;
+      max-height: 100%;
+      display: block;
+    }
+
+    .map-container svg path {
+      cursor: pointer;
+      transition: opacity 0.15s;
+      stroke: #666;
+      stroke-width: 0.8;
+    }
+
+    .map-container svg path:hover {
+      stroke: #fff;
+      stroke-width: 1.5;
+      filter: brightness(1.2);
+    }
+
+    .zoom-controls {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      z-index: 10;
+    }
+
+    .zoom-controls button {
+      width: 36px;
+      height: 36px;
+      border: 1px solid #444;
+      background: rgba(26, 26, 46, 0.9);
+      color: #ccc;
+      font-size: 1.2rem;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .zoom-controls button:hover {
+      background: #333;
+    }
+
+    .tooltip {
+      position: fixed;
+      background: rgba(0, 0, 0, 0.85);
+      color: #fff;
+      padding: 6px 10px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      pointer-events: none;
+      z-index: 100;
+      display: none;
+      white-space: nowrap;
+    }
+
+    .stats {
+      font-size: 0.85rem;
+      color: #888;
+    }
+
+    .stats span {
+      color: #4a6fa5;
+      font-weight: 600;
+    }
+
+    .share-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .share-modal.open {
+      display: flex;
+    }
+
+    .share-modal-content {
+      background: #2a2a3e;
+      border: 1px solid #444;
+      border-radius: 8px;
+      padding: 24px;
+      max-width: 500px;
+      width: 90%;
+    }
+
+    .share-modal-content h2 {
+      font-size: 1.1rem;
+      margin-bottom: 12px;
+    }
+
+    .share-modal-content textarea {
+      width: 100%;
+      height: 80px;
+      background: #1a1a2e;
+      border: 1px solid #444;
+      color: #e0e0e0;
+      border-radius: 4px;
+      padding: 8px;
+      font-size: 0.75rem;
+      resize: none;
+      font-family: monospace;
+    }
+
+    .share-modal-content .btn-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      justify-content: flex-end;
+    }
+
+    footer {
+      text-align: center;
+      padding: 6px;
+      font-size: 0.7rem;
+      color: #555;
+      z-index: 10;
+      background: rgba(26, 26, 46, 0.95);
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Where I've Been</h1>
+  </header>
+
+  <div class="toolbar">
+    <div class="map-tabs">
+      <button class="active" data-map="us">US States</button>
+      <button data-map="world">World</button>
+    </div>
+
+    <div class="color-picker-wrapper">
+      <label>Color:</label>
+      <input type="color" id="colorPicker" value="#4a90d9">
+      <div class="preset-colors">
+        <div class="preset-color active" style="background:#4a90d9" data-color="#4a90d9"></div>
+        <div class="preset-color" style="background:#e74c3c" data-color="#e74c3c"></div>
+        <div class="preset-color" style="background:#2ecc71" data-color="#2ecc71"></div>
+        <div class="preset-color" style="background:#f39c12" data-color="#f39c12"></div>
+        <div class="preset-color" style="background:#9b59b6" data-color="#9b59b6"></div>
+        <div class="preset-color" style="background:#1abc9c" data-color="#1abc9c"></div>
+      </div>
+    </div>
+
+    <div class="stats" id="stats">
+      <span id="visitedCount">0</span> / <span id="totalCount">0</span> visited
+    </div>
+
+    <button class="btn btn-primary" id="shareBtn">Share / Save</button>
+    <button class="btn btn-danger" id="clearBtn">Clear All</button>
+  </div>
+
+  <div class="map-container" id="mapContainer"></div>
+
+  <div class="zoom-controls">
+    <button id="zoomIn" title="Zoom in">+</button>
+    <button id="zoomOut" title="Zoom out">&minus;</button>
+    <button id="zoomReset" title="Reset view">&#8634;</button>
+  </div>
+
+  <div class="tooltip" id="tooltip"></div>
+
+  <div class="share-modal" id="shareModal">
+    <div class="share-modal-content">
+      <h2>Share Your Map</h2>
+      <p style="font-size:0.85rem; color:#aaa; margin-bottom:12px;">
+        Copy the link below to share your visited map. Anyone with this link will see your colored regions.
+      </p>
+      <textarea id="shareUrl" readonly></textarea>
+      <div class="btn-row">
+        <button class="btn" id="closeModal">Close</button>
+        <button class="btn btn-primary" id="copyLink">Copy Link</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    US map &copy; <a href="https://simplemaps.com" style="color:#666">Simplemaps.com</a> &mdash;
+    World map from <a href="https://github.com/johan/world.geo.json" style="color:#666">Natural Earth</a>
+  </footer>
+
+  <script>
+    const WORLD_SVG_URL = 'world.svg';
+
+    const state = {
+      currentMap: 'us',
+      selectedColor: '#4a90d9',
+      visited: { us: {}, world: {} },
+      zoom: 1,
+      panX: 0,
+      panY: 0,
+      isPanning: false,
+      startX: 0,
+      startY: 0,
+      svgCache: {},
+    };
+
+    const mapContainer = document.getElementById('mapContainer');
+    const tooltip = document.getElementById('tooltip');
+    const colorPicker = document.getElementById('colorPicker');
+    const visitedCount = document.getElementById('visitedCount');
+    const totalCount = document.getElementById('totalCount');
+
+    // --- Color picker ---
+    colorPicker.addEventListener('input', (e) => {
+      state.selectedColor = e.target.value;
+      document.querySelectorAll('.preset-color').forEach(el => el.classList.remove('active'));
+    });
+
+    document.querySelectorAll('.preset-color').forEach(el => {
+      el.addEventListener('click', () => {
+        state.selectedColor = el.dataset.color;
+        colorPicker.value = el.dataset.color;
+        document.querySelectorAll('.preset-color').forEach(p => p.classList.remove('active'));
+        el.classList.add('active');
+      });
+    });
+
+    // --- Map tab switching ---
+    document.querySelectorAll('.map-tabs button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.map-tabs button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        state.currentMap = btn.dataset.map;
+        resetView();
+        loadMap(btn.dataset.map);
+      });
+    });
+
+    // --- Zoom & Pan ---
+    function applyTransform() {
+      const svg = mapContainer.querySelector('svg');
+      if (!svg) return;
+      const g = svg.querySelector('#panZoomGroup');
+      if (g) {
+        g.setAttribute('transform', `translate(${state.panX},${state.panY}) scale(${state.zoom})`);
+      }
+    }
+
+    function resetView() {
+      state.zoom = 1;
+      state.panX = 0;
+      state.panY = 0;
+      applyTransform();
+    }
+
+    document.getElementById('zoomIn').addEventListener('click', () => {
+      state.zoom = Math.min(state.zoom * 1.3, 20);
+      applyTransform();
+    });
+
+    document.getElementById('zoomOut').addEventListener('click', () => {
+      state.zoom = Math.max(state.zoom / 1.3, 0.5);
+      applyTransform();
+    });
+
+    document.getElementById('zoomReset').addEventListener('click', resetView);
+
+    mapContainer.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
+      const newZoom = Math.min(Math.max(state.zoom * factor, 0.5), 20);
+
+      // Zoom toward cursor position in SVG coordinates
+      const svg = mapContainer.querySelector('svg');
+      if (!svg) return;
+      const vb = svg.getAttribute('viewBox').split(' ').map(Number);
+      const rect = svg.getBoundingClientRect();
+      const mouseX = (e.clientX - rect.left) / rect.width * vb[2];
+      const mouseY = (e.clientY - rect.top) / rect.height * vb[3];
+
+      // Adjust pan so the point under the cursor stays fixed
+      const svgX = (mouseX - state.panX) / state.zoom;
+      const svgY = (mouseY - state.panY) / state.zoom;
+      state.panX = mouseX - svgX * newZoom;
+      state.panY = mouseY - svgY * newZoom;
+
+      state.zoom = newZoom;
+      applyTransform();
+    }, { passive: false });
+
+    // Simplified pan via mouse/touch
+    mapContainer.addEventListener('mousedown', startPan);
+    mapContainer.addEventListener('touchstart', startPan, { passive: false });
+
+    function startPan(e) {
+      // Ignore if clicking on a path (let click handler do its thing)
+      if (e.target.closest('path') && !e.shiftKey) return;
+      state.isPanning = true;
+      const point = e.touches ? e.touches[0] : e;
+      // Convert client pixels to SVG coordinate deltas
+      const svg = mapContainer.querySelector('svg');
+      const vb = svg ? svg.getAttribute('viewBox').split(' ').map(Number) : [0,0,1000,500];
+      const rect = svg ? svg.getBoundingClientRect() : { width: 1000, height: 500 };
+      state.panScale = { x: vb[2] / rect.width, y: vb[3] / rect.height };
+      state.startX = point.clientX;
+      state.startY = point.clientY;
+      state.startPanX = state.panX;
+      state.startPanY = state.panY;
+      e.preventDefault();
+    }
+
+    window.addEventListener('mousemove', movePan);
+    window.addEventListener('touchmove', movePan, { passive: false });
+
+    function movePan(e) {
+      if (!state.isPanning) return;
+      const point = e.touches ? e.touches[0] : e;
+      const dx = (point.clientX - state.startX) * state.panScale.x;
+      const dy = (point.clientY - state.startY) * state.panScale.y;
+      state.panX = state.startPanX + dx;
+      state.panY = state.startPanY + dy;
+      applyTransform();
+      e.preventDefault();
+    }
+
+    window.addEventListener('mouseup', () => state.isPanning = false);
+    window.addEventListener('touchend', () => state.isPanning = false);
+
+    // --- Tooltip ---
+    mapContainer.addEventListener('mousemove', (e) => {
+      const path = e.target.closest('path');
+      if (path) {
+        const name = path.getAttribute('data-name') || path.getAttribute('title') || path.id;
+        if (name) {
+          tooltip.style.display = 'block';
+          tooltip.textContent = name;
+          tooltip.style.left = (e.clientX + 12) + 'px';
+          tooltip.style.top = (e.clientY - 10) + 'px';
+        }
+      } else {
+        tooltip.style.display = 'none';
+      }
+    });
+
+    mapContainer.addEventListener('mouseleave', () => {
+      tooltip.style.display = 'none';
+    });
+
+    // --- Click to color ---
+    mapContainer.addEventListener('click', (e) => {
+      const path = e.target.closest('path');
+      if (!path) return;
+      const id = path.id || path.getAttribute('data-id');
+      if (!id) return;
+
+      const mapData = state.visited[state.currentMap];
+
+      if (mapData[id] === state.selectedColor) {
+        // Clicking same color = unvisit
+        delete mapData[id];
+        path.style.fill = state.currentMap === 'us' ? '#f9f9f9' : '#c0c0c0';
+        path.style.fillOpacity = '1';
+      } else {
+        mapData[id] = state.selectedColor;
+        path.style.fill = state.selectedColor;
+        path.style.fillOpacity = '0.55';
+      }
+
+      updateStats();
+      saveToLocalStorage();
+    });
+
+    // --- Stats ---
+    function updateStats() {
+      const paths = mapContainer.querySelectorAll('svg path[data-name]');
+      const mapData = state.visited[state.currentMap];
+      visitedCount.textContent = Object.keys(mapData).length;
+      totalCount.textContent = paths.length;
+    }
+
+    // --- Load SVG maps ---
+    async function loadMap(mapType) {
+      mapContainer.innerHTML = '<p style="color:#888">Loading map...</p>';
+
+      try {
+        let svgText;
+        if (state.svgCache[mapType]) {
+          svgText = state.svgCache[mapType];
+        } else if (mapType === 'us') {
+          const resp = await fetch('us.svg');
+          svgText = await resp.text();
+          state.svgCache[mapType] = svgText;
+        } else {
+          const resp = await fetch(WORLD_SVG_URL);
+          svgText = await resp.text();
+          state.svgCache[mapType] = svgText;
+        }
+
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(svgText, 'image/svg+xml');
+        const svg = doc.querySelector('svg');
+
+        // Ensure viewBox is set
+        if (!svg.getAttribute('viewBox')) {
+          const w = svg.getAttribute('width') || 1000;
+          const h = svg.getAttribute('height') || 589;
+          svg.setAttribute('viewBox', `0 0 ${parseFloat(w)} ${parseFloat(h)}`);
+        }
+
+        svg.removeAttribute('width');
+        svg.removeAttribute('height');
+        svg.style.width = '100%';
+        svg.style.height = '100%';
+
+        // Wrap all content in a group for pan/zoom
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.id = 'panZoomGroup';
+        while (svg.children.length > 0) {
+          g.appendChild(svg.children[0]);
+        }
+        svg.appendChild(g);
+
+        // Set default fill for paths
+        svg.querySelectorAll('path').forEach(path => {
+          if (mapType === 'us') {
+            path.style.fill = '#f9f9f9';
+          } else {
+            // World map: ensure paths have ids from title or name attributes
+            if (!path.id && path.parentElement) {
+              const parentId = path.parentElement.id;
+              if (parentId) path.id = parentId;
+            }
+            // Try to get name from class or parent
+            if (!path.getAttribute('data-name')) {
+              const title = path.querySelector('title');
+              if (title) {
+                path.setAttribute('data-name', title.textContent);
+              } else if (path.parentElement) {
+                const parentTitle = path.parentElement.querySelector(':scope > title');
+                if (parentTitle) {
+                  path.setAttribute('data-name', parentTitle.textContent);
+                }
+              }
+              // Use id as fallback name
+              if (!path.getAttribute('data-name') && path.id) {
+                path.setAttribute('data-name', path.id.replace(/_/g, ' '));
+              }
+            }
+            path.style.fill = '#c0c0c0';
+          }
+          path.style.fillOpacity = '1';
+        });
+
+        // For world map, handle grouped paths (countries often in <g> elements)
+        if (mapType === 'world') {
+          svg.querySelectorAll('g[id]').forEach(group => {
+            const paths = group.querySelectorAll('path');
+            const titleEl = group.querySelector('title');
+            const name = titleEl ? titleEl.textContent : group.id.replace(/_/g, ' ');
+            paths.forEach(p => {
+              if (!p.id) p.id = group.id;
+              if (!p.getAttribute('data-name')) p.setAttribute('data-name', name);
+            });
+          });
+        }
+
+        mapContainer.innerHTML = '';
+        mapContainer.appendChild(svg);
+
+        // Restore visited colors
+        const mapData = state.visited[state.currentMap];
+        for (const [id, color] of Object.entries(mapData)) {
+          const paths = svg.querySelectorAll(`#${CSS.escape(id)}`);
+          paths.forEach(p => {
+            p.style.fill = color;
+            p.style.fillOpacity = '0.55';
+          });
+        }
+
+        updateStats();
+        applyTransform();
+      } catch (err) {
+        mapContainer.innerHTML = `<p style="color:#e08080">Failed to load map: ${err.message}</p>`;
+        console.error(err);
+      }
+    }
+
+    // --- Share / Save ---
+    function encodeState() {
+      const data = {};
+      for (const [mapType, visited] of Object.entries(state.visited)) {
+        if (Object.keys(visited).length > 0) {
+          data[mapType] = visited;
+        }
+      }
+      return btoa(JSON.stringify(data));
+    }
+
+    function decodeState(encoded) {
+      try {
+        return JSON.parse(atob(encoded));
+      } catch {
+        return null;
+      }
+    }
+
+    function saveToLocalStorage() {
+      localStorage.setItem('visitedMaps', JSON.stringify(state.visited));
+    }
+
+    function loadFromLocalStorage() {
+      const saved = localStorage.getItem('visitedMaps');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed.us) state.visited.us = parsed.us;
+          if (parsed.world) state.visited.world = parsed.world;
+        } catch {}
+      }
+    }
+
+    function loadFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      const data = params.get('data');
+      if (data) {
+        const decoded = decodeState(data);
+        if (decoded) {
+          if (decoded.us) state.visited.us = decoded.us;
+          if (decoded.world) state.visited.world = decoded.world;
+          return true;
+        }
+      }
+      return false;
+    }
+
+    document.getElementById('shareBtn').addEventListener('click', () => {
+      const encoded = encodeState();
+      const url = window.location.origin + window.location.pathname + '?data=' + encoded;
+      document.getElementById('shareUrl').value = url;
+      document.getElementById('shareModal').classList.add('open');
+    });
+
+    document.getElementById('copyLink').addEventListener('click', () => {
+      const textarea = document.getElementById('shareUrl');
+      textarea.select();
+      navigator.clipboard.writeText(textarea.value).then(() => {
+        document.getElementById('copyLink').textContent = 'Copied!';
+        setTimeout(() => {
+          document.getElementById('copyLink').textContent = 'Copy Link';
+        }, 2000);
+      });
+    });
+
+    document.getElementById('closeModal').addEventListener('click', () => {
+      document.getElementById('shareModal').classList.remove('open');
+    });
+
+    document.getElementById('shareModal').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) {
+        e.currentTarget.classList.remove('open');
+      }
+    });
+
+    // --- Clear ---
+    document.getElementById('clearBtn').addEventListener('click', () => {
+      if (!confirm('Clear all visited regions on the current map?')) return;
+      state.visited[state.currentMap] = {};
+      saveToLocalStorage();
+      loadMap(state.currentMap);
+    });
+
+    // --- Init ---
+    const loadedFromUrl = loadFromUrl();
+    if (!loadedFromUrl) {
+      loadFromLocalStorage();
+    }
+    loadMap('us');
+  </script>
+</body>
+</html>
