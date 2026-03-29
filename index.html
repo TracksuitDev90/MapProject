@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Where I've Been — Interactive Visited Map</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -11,11 +11,12 @@
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background: #1a1a2e;
       color: #e0e0e0;
-      min-height: 100vh;
+      height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
       overflow: hidden;
+      touch-action: none;
     }
 
     header {
@@ -24,6 +25,7 @@
       width: 100%;
       z-index: 10;
       background: rgba(26, 26, 46, 0.95);
+      flex-shrink: 0;
     }
 
     header h1 {
@@ -43,6 +45,7 @@
       background: rgba(26, 26, 46, 0.95);
       z-index: 10;
       width: 100%;
+      flex-shrink: 0;
     }
 
     .toolbar label {
@@ -162,30 +165,29 @@
       justify-content: center;
       overflow: hidden;
       position: relative;
-      cursor: grab;
-    }
-
-    .map-container:active {
-      cursor: grabbing;
     }
 
     .map-container svg {
-      max-width: 100%;
-      max-height: 100%;
+      width: 100%;
+      height: 100%;
       display: block;
     }
 
-    .map-container svg path {
+    .map-container svg path[data-name] {
       cursor: pointer;
-      transition: opacity 0.15s;
-      stroke: #666;
-      stroke-width: 0.8;
+      transition: filter 0.15s;
     }
 
-    .map-container svg path:hover {
-      stroke: #fff;
-      stroke-width: 1.5;
-      filter: brightness(1.2);
+    .map-container svg path[data-name]:hover {
+      stroke: #fff !important;
+      stroke-width: 1.5 !important;
+      filter: brightness(1.15);
+    }
+
+    .map-container svg text.state-label {
+      pointer-events: none;
+      user-select: none;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     }
 
     .zoom-controls {
@@ -295,6 +297,7 @@
       z-index: 10;
       background: rgba(26, 26, 46, 0.95);
       width: 100%;
+      flex-shrink: 0;
     }
   </style>
 </head>
@@ -360,19 +363,21 @@
   </footer>
 
   <script>
-    const WORLD_SVG_URL = 'world.svg';
+    // =============================================
+    // State label positions (SVG coordinate space)
+    // =============================================
+    const US_LABEL_POSITIONS = {"MA":{"x":938.6,"y":137.3},"MN":{"x":610.6,"y":124.9},"MT":{"x":386.3,"y":103.9},"ND":{"x":517.3,"y":104.7},"HI":{"x":375,"y":520},"ID":{"x":314.3,"y":147.8},"WA":{"x":243.3,"y":71.0},"AZ":{"x":321.2,"y":361.7},"CA":{"x":210,"y":310},"CO":{"x":432.4,"y":273.5},"NV":{"x":259.8,"y":268.7},"NM":{"x":418.2,"y":368.0},"OR":{"x":224.9,"y":136.1},"UT":{"x":338.7,"y":260.3},"WY":{"x":407.9,"y":190.1},"AR":{"x":650.1,"y":357.2},"IA":{"x":620.9,"y":211.2},"KS":{"x":548.7,"y":286.6},"MO":{"x":652.5,"y":293.9},"NE":{"x":526.9,"y":228.9},"OK":{"x":555,"y":345.4},"SD":{"x":517.7,"y":169.9},"LA":{"x":672,"y":425},"TX":{"x":520.3,"y":434.3},"CT":{"x":938,"y":158},"NH":{"x":935,"y":108},"RI":{"x":950,"y":167},"VT":{"x":912,"y":96},"AL":{"x":750.7,"y":388.6},"FL":{"x":826,"y":460},"GA":{"x":805.2,"y":376.2},"MS":{"x":696.7,"y":394.7},"SC":{"x":839.4,"y":351.1},"IL":{"x":685.8,"y":255.0},"IN":{"x":735.3,"y":247.1},"KY":{"x":760,"y":290.0},"NC":{"x":860,"y":318},"OH":{"x":784.7,"y":224.2},"TN":{"x":750.8,"y":321.3},"VA":{"x":862,"y":279},"WI":{"x":664.2,"y":151.8},"WV":{"x":830,"y":262},"DE":{"x":905,"y":247},"DC":{"x":880,"y":258},"MD":{"x":900,"y":238},"NJ":{"x":915,"y":210},"NY":{"x":893,"y":145},"PA":{"x":867,"y":194.0},"ME":{"x":952.8,"y":75},"MI":{"x":730,"y":168},"AK":{"x":161.1,"y":497.8}};
+
+    const FILL_OPACITY = 0.4;
 
     const state = {
       currentMap: 'us',
       selectedColor: '#4a90d9',
       visited: { us: {}, world: {} },
-      zoom: 1,
-      panX: 0,
-      panY: 0,
-      isPanning: false,
-      startX: 0,
-      startY: 0,
       svgCache: {},
+      // viewBox-based zoom/pan state
+      vb: null,        // current viewBox {x, y, w, h}
+      vbDefault: null,  // original viewBox for reset
     };
 
     const mapContainer = document.getElementById('mapContainer');
@@ -402,106 +407,189 @@
         document.querySelectorAll('.map-tabs button').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         state.currentMap = btn.dataset.map;
-        resetView();
         loadMap(btn.dataset.map);
       });
     });
 
-    // --- Zoom & Pan ---
-    function applyTransform() {
+    // =============================================
+    // ViewBox-based zoom & pan
+    // =============================================
+    function applyViewBox() {
       const svg = mapContainer.querySelector('svg');
-      if (!svg) return;
-      const g = svg.querySelector('#panZoomGroup');
-      if (g) {
-        g.setAttribute('transform', `translate(${state.panX},${state.panY}) scale(${state.zoom})`);
-      }
+      if (!svg || !state.vb) return;
+      svg.setAttribute('viewBox', `${state.vb.x} ${state.vb.y} ${state.vb.w} ${state.vb.h}`);
     }
 
     function resetView() {
-      state.zoom = 1;
-      state.panX = 0;
-      state.panY = 0;
-      applyTransform();
+      if (state.vbDefault) {
+        state.vb = { ...state.vbDefault };
+        applyViewBox();
+      }
     }
 
-    document.getElementById('zoomIn').addEventListener('click', () => {
-      state.zoom = Math.min(state.zoom * 1.3, 20);
-      applyTransform();
-    });
+    // Convert client (screen) coordinates to SVG viewBox coordinates
+    function clientToSvg(clientX, clientY) {
+      const svg = mapContainer.querySelector('svg');
+      if (!svg || !state.vb) return { x: 0, y: 0 };
+      const rect = svg.getBoundingClientRect();
+      const fracX = (clientX - rect.left) / rect.width;
+      const fracY = (clientY - rect.top) / rect.height;
+      return {
+        x: state.vb.x + fracX * state.vb.w,
+        y: state.vb.y + fracY * state.vb.h,
+      };
+    }
 
-    document.getElementById('zoomOut').addEventListener('click', () => {
-      state.zoom = Math.max(state.zoom / 1.3, 0.5);
-      applyTransform();
-    });
+    function zoomAtPoint(factor, cx, cy) {
+      if (!state.vb) return;
+      // cx, cy are in SVG viewBox coordinates — the point that should stay fixed
+      const newW = state.vbDefault.w / factor;
+      const newH = state.vbDefault.h / factor;
+      // Clamp: don't zoom out past original, max ~20x zoom
+      const minW = state.vbDefault.w / 20;
+      const clampedW = Math.max(minW, Math.min(state.vbDefault.w, newW));
+      const clampedH = Math.max(state.vbDefault.h / 20, Math.min(state.vbDefault.h, clampedW * state.vbDefault.h / state.vbDefault.w));
 
+      // Keep the point (cx, cy) at the same fractional position in the viewport
+      const fracX = (cx - state.vb.x) / state.vb.w;
+      const fracY = (cy - state.vb.y) / state.vb.h;
+
+      state.vb.w = clampedW;
+      state.vb.h = clampedH;
+      state.vb.x = cx - fracX * state.vb.w;
+      state.vb.y = cy - fracY * state.vb.h;
+
+      applyViewBox();
+    }
+
+    function zoomBy(factor) {
+      if (!state.vb) return;
+      // Zoom centered on the current viewport center
+      const cx = state.vb.x + state.vb.w / 2;
+      const cy = state.vb.y + state.vb.h / 2;
+      const currentZoom = state.vbDefault.w / state.vb.w;
+      const newZoom = currentZoom * factor;
+      zoomAtPoint(newZoom, cx, cy);
+    }
+
+    document.getElementById('zoomIn').addEventListener('click', () => zoomBy(1.4));
+    document.getElementById('zoomOut').addEventListener('click', () => zoomBy(1 / 1.4));
     document.getElementById('zoomReset').addEventListener('click', resetView);
 
+    // --- Mouse wheel zoom ---
     mapContainer.addEventListener('wheel', (e) => {
       e.preventDefault();
-      const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
-      const newZoom = Math.min(Math.max(state.zoom * factor, 0.5), 20);
-
-      // Zoom toward cursor position in SVG coordinates
-      const svg = mapContainer.querySelector('svg');
-      if (!svg) return;
-      const vb = svg.getAttribute('viewBox').split(' ').map(Number);
-      const rect = svg.getBoundingClientRect();
-      const mouseX = (e.clientX - rect.left) / rect.width * vb[2];
-      const mouseY = (e.clientY - rect.top) / rect.height * vb[3];
-
-      // Adjust pan so the point under the cursor stays fixed
-      const svgX = (mouseX - state.panX) / state.zoom;
-      const svgY = (mouseY - state.panY) / state.zoom;
-      state.panX = mouseX - svgX * newZoom;
-      state.panY = mouseY - svgY * newZoom;
-
-      state.zoom = newZoom;
-      applyTransform();
+      if (!state.vb) return;
+      const svgPt = clientToSvg(e.clientX, e.clientY);
+      const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+      const currentZoom = state.vbDefault.w / state.vb.w;
+      zoomAtPoint(currentZoom * factor, svgPt.x, svgPt.y);
     }, { passive: false });
 
-    // Simplified pan via mouse/touch
-    mapContainer.addEventListener('mousedown', startPan);
-    mapContainer.addEventListener('touchstart', startPan, { passive: false });
+    // --- Pan (mouse drag & touch drag) ---
+    let panState = null;
 
-    function startPan(e) {
-      // Ignore if clicking on a path (let click handler do its thing)
-      if (e.target.closest('path') && !e.shiftKey) return;
-      state.isPanning = true;
+    mapContainer.addEventListener('mousedown', onPanStart);
+    mapContainer.addEventListener('touchstart', onPanStart, { passive: false });
+
+    function onPanStart(e) {
       const point = e.touches ? e.touches[0] : e;
-      // Convert client pixels to SVG coordinate deltas
+      const isTouch = !!e.touches;
+
+      // For touch with 2+ fingers, let pinch handler deal with it
+      if (e.touches && e.touches.length >= 2) return;
+
+      panState = {
+        startClientX: point.clientX,
+        startClientY: point.clientY,
+        startVbX: state.vb.x,
+        startVbY: state.vb.y,
+        moved: false,
+        isTouch: isTouch,
+      };
+
+      if (!isTouch) e.preventDefault();
+    }
+
+    window.addEventListener('mousemove', onPanMove);
+    window.addEventListener('touchmove', onPanMove, { passive: false });
+
+    function onPanMove(e) {
+      if (!panState) return;
+      // If pinch started, abort pan
+      if (e.touches && e.touches.length >= 2) { panState = null; return; }
+
+      const point = e.touches ? e.touches[0] : e;
       const svg = mapContainer.querySelector('svg');
-      const vb = svg ? svg.getAttribute('viewBox').split(' ').map(Number) : [0,0,1000,500];
-      const rect = svg ? svg.getBoundingClientRect() : { width: 1000, height: 500 };
-      state.panScale = { x: vb[2] / rect.width, y: vb[3] / rect.height };
-      state.startX = point.clientX;
-      state.startY = point.clientY;
-      state.startPanX = state.panX;
-      state.startPanY = state.panY;
+      if (!svg || !state.vb) return;
+      const rect = svg.getBoundingClientRect();
+
+      const dx = (point.clientX - panState.startClientX) / rect.width * state.vb.w;
+      const dy = (point.clientY - panState.startClientY) / rect.height * state.vb.h;
+
+      if (Math.abs(point.clientX - panState.startClientX) > 3 ||
+          Math.abs(point.clientY - panState.startClientY) > 3) {
+        panState.moved = true;
+      }
+
+      state.vb.x = panState.startVbX - dx;
+      state.vb.y = panState.startVbY - dy;
+      applyViewBox();
       e.preventDefault();
     }
 
-    window.addEventListener('mousemove', movePan);
-    window.addEventListener('touchmove', movePan, { passive: false });
+    window.addEventListener('mouseup', onPanEnd);
+    window.addEventListener('touchend', onPanEnd);
+    window.addEventListener('touchcancel', onPanEnd);
 
-    function movePan(e) {
-      if (!state.isPanning) return;
-      const point = e.touches ? e.touches[0] : e;
-      const dx = (point.clientX - state.startX) * state.panScale.x;
-      const dy = (point.clientY - state.startY) * state.panScale.y;
-      state.panX = state.startPanX + dx;
-      state.panY = state.startPanY + dy;
-      applyTransform();
-      e.preventDefault();
+    function onPanEnd() {
+      panState = null;
     }
 
-    window.addEventListener('mouseup', () => state.isPanning = false);
-    window.addEventListener('touchend', () => state.isPanning = false);
+    // --- Pinch to zoom (mobile) ---
+    let pinchState = null;
+
+    mapContainer.addEventListener('touchstart', onPinchStart, { passive: false });
+
+    function onPinchStart(e) {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        panState = null; // cancel any pan
+        const t0 = e.touches[0], t1 = e.touches[1];
+        const dist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+        const midX = (t0.clientX + t1.clientX) / 2;
+        const midY = (t0.clientY + t1.clientY) / 2;
+        const svgMid = clientToSvg(midX, midY);
+        pinchState = {
+          startDist: dist,
+          startZoom: state.vbDefault.w / state.vb.w,
+          centerX: svgMid.x,
+          centerY: svgMid.y,
+        };
+      }
+    }
+
+    window.addEventListener('touchmove', onPinchMove, { passive: false });
+
+    function onPinchMove(e) {
+      if (!pinchState || e.touches.length < 2) return;
+      e.preventDefault();
+      const t0 = e.touches[0], t1 = e.touches[1];
+      const dist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+      const scale = dist / pinchState.startDist;
+      const newZoom = pinchState.startZoom * scale;
+      zoomAtPoint(newZoom, pinchState.centerX, pinchState.centerY);
+    }
+
+    window.addEventListener('touchend', (e) => {
+      if (e.touches.length < 2) pinchState = null;
+    });
 
     // --- Tooltip ---
     mapContainer.addEventListener('mousemove', (e) => {
-      const path = e.target.closest('path');
+      const path = e.target.closest('path[data-name]');
       if (path) {
-        const name = path.getAttribute('data-name') || path.getAttribute('title') || path.id;
+        const name = path.getAttribute('data-name');
         if (name) {
           tooltip.style.display = 'block';
           tooltip.textContent = name;
@@ -519,7 +607,10 @@
 
     // --- Click to color ---
     mapContainer.addEventListener('click', (e) => {
-      const path = e.target.closest('path');
+      // Don't color if user was panning
+      if (panState && panState.moved) return;
+
+      const path = e.target.closest('path[data-name]');
       if (!path) return;
       const id = path.id || path.getAttribute('data-id');
       if (!id) return;
@@ -527,19 +618,25 @@
       const mapData = state.visited[state.currentMap];
 
       if (mapData[id] === state.selectedColor) {
-        // Clicking same color = unvisit
         delete mapData[id];
         path.style.fill = state.currentMap === 'us' ? '#f9f9f9' : '#c0c0c0';
         path.style.fillOpacity = '1';
       } else {
         mapData[id] = state.selectedColor;
         path.style.fill = state.selectedColor;
-        path.style.fillOpacity = '0.55';
+        path.style.fillOpacity = String(FILL_OPACITY);
       }
 
       updateStats();
       saveToLocalStorage();
     });
+
+    // Prevent click from firing after a drag
+    mapContainer.addEventListener('click', (e) => {
+      if (panState && panState.moved) {
+        e.stopPropagation();
+      }
+    }, true);
 
     // --- Stats ---
     function updateStats() {
@@ -547,6 +644,27 @@
       const mapData = state.visited[state.currentMap];
       visitedCount.textContent = Object.keys(mapData).length;
       totalCount.textContent = paths.length;
+    }
+
+    // --- Add state labels to US map ---
+    function addStateLabels(svg) {
+      const ns = 'http://www.w3.org/2000/svg';
+      for (const [abbr, pos] of Object.entries(US_LABEL_POSITIONS)) {
+        const text = document.createElementNS(ns, 'text');
+        text.setAttribute('x', pos.x);
+        text.setAttribute('y', pos.y);
+        text.setAttribute('text-anchor', 'middle');
+        text.setAttribute('dominant-baseline', 'central');
+        text.setAttribute('class', 'state-label');
+        text.setAttribute('font-size', '11');
+        text.setAttribute('font-weight', '600');
+        text.setAttribute('fill', '#333');
+        text.setAttribute('stroke', '#fff');
+        text.setAttribute('stroke-width', '2.5');
+        text.setAttribute('paint-order', 'stroke');
+        text.textContent = abbr;
+        svg.appendChild(text);
+      }
     }
 
     // --- Load SVG maps ---
@@ -557,12 +675,9 @@
         let svgText;
         if (state.svgCache[mapType]) {
           svgText = state.svgCache[mapType];
-        } else if (mapType === 'us') {
-          const resp = await fetch('us.svg');
-          svgText = await resp.text();
-          state.svgCache[mapType] = svgText;
         } else {
-          const resp = await fetch(WORLD_SVG_URL);
+          const url = mapType === 'us' ? 'us.svg' : 'world.svg';
+          const resp = await fetch(url);
           svgText = await resp.text();
           state.svgCache[mapType] = svgText;
         }
@@ -573,66 +688,33 @@
 
         // Ensure viewBox is set
         if (!svg.getAttribute('viewBox')) {
-          const w = svg.getAttribute('width') || 1000;
-          const h = svg.getAttribute('height') || 589;
-          svg.setAttribute('viewBox', `0 0 ${parseFloat(w)} ${parseFloat(h)}`);
+          const w = parseFloat(svg.getAttribute('width')) || 1000;
+          const h = parseFloat(svg.getAttribute('height')) || 500;
+          svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
         }
 
+        // Parse the native viewBox — this is our zoom/pan basis
+        const vbParts = svg.getAttribute('viewBox').split(/\s+/).map(Number);
+        state.vbDefault = { x: vbParts[0], y: vbParts[1], w: vbParts[2], h: vbParts[3] };
+        state.vb = { ...state.vbDefault };
+
+        // Let the SVG fill its container via CSS, remove fixed dimensions
         svg.removeAttribute('width');
         svg.removeAttribute('height');
-        svg.style.width = '100%';
-        svg.style.height = '100%';
+        svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
 
-        // Wrap all content in a group for pan/zoom
-        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        g.id = 'panZoomGroup';
-        while (svg.children.length > 0) {
-          g.appendChild(svg.children[0]);
-        }
-        svg.appendChild(g);
-
-        // Set default fill for paths
+        // Set default fills
         svg.querySelectorAll('path').forEach(path => {
-          if (mapType === 'us') {
-            path.style.fill = '#f9f9f9';
-          } else {
-            // World map: ensure paths have ids from title or name attributes
-            if (!path.id && path.parentElement) {
-              const parentId = path.parentElement.id;
-              if (parentId) path.id = parentId;
-            }
-            // Try to get name from class or parent
-            if (!path.getAttribute('data-name')) {
-              const title = path.querySelector('title');
-              if (title) {
-                path.setAttribute('data-name', title.textContent);
-              } else if (path.parentElement) {
-                const parentTitle = path.parentElement.querySelector(':scope > title');
-                if (parentTitle) {
-                  path.setAttribute('data-name', parentTitle.textContent);
-                }
-              }
-              // Use id as fallback name
-              if (!path.getAttribute('data-name') && path.id) {
-                path.setAttribute('data-name', path.id.replace(/_/g, ' '));
-              }
-            }
-            path.style.fill = '#c0c0c0';
-          }
+          const defaultFill = mapType === 'us' ? '#f9f9f9' : '#c0c0c0';
+          path.style.fill = defaultFill;
           path.style.fillOpacity = '1';
+          path.style.stroke = '#666';
+          path.style.strokeWidth = mapType === 'us' ? '0.8' : '0.5';
         });
 
-        // For world map, handle grouped paths (countries often in <g> elements)
-        if (mapType === 'world') {
-          svg.querySelectorAll('g[id]').forEach(group => {
-            const paths = group.querySelectorAll('path');
-            const titleEl = group.querySelector('title');
-            const name = titleEl ? titleEl.textContent : group.id.replace(/_/g, ' ');
-            paths.forEach(p => {
-              if (!p.id) p.id = group.id;
-              if (!p.getAttribute('data-name')) p.setAttribute('data-name', name);
-            });
-          });
+        // Add state labels for US map
+        if (mapType === 'us') {
+          addStateLabels(svg);
         }
 
         mapContainer.innerHTML = '';
@@ -644,12 +726,11 @@
           const paths = svg.querySelectorAll(`#${CSS.escape(id)}`);
           paths.forEach(p => {
             p.style.fill = color;
-            p.style.fillOpacity = '0.55';
+            p.style.fillOpacity = String(FILL_OPACITY);
           });
         }
 
         updateStats();
-        applyTransform();
       } catch (err) {
         mapContainer.innerHTML = `<p style="color:#e08080">Failed to load map: ${err.message}</p>`;
         console.error(err);
