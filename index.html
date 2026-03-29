@@ -79,7 +79,6 @@
       flex-direction: column;
       align-items: center;
       overflow: hidden;
-      touch-action: none;
     }
 
     /* --- Header: M3 top app bar (surface-container) --- */
@@ -292,6 +291,8 @@
       width: 100%;
       height: 100%;
       display: block;
+      transform-origin: center center;
+      will-change: transform;
     }
 
     .map-container svg path[data-name] {
@@ -528,7 +529,7 @@
     // =============================================
     // State label positions (SVG coordinate space)
     // =============================================
-    const US_LABEL_POSITIONS = {"MA":{"x":938.6,"y":137.3},"MN":{"x":610.6,"y":124.9},"MT":{"x":386.3,"y":103.9},"ND":{"x":517.3,"y":104.7},"HI":{"x":375,"y":520},"ID":{"x":314.3,"y":147.8},"WA":{"x":243.3,"y":71.0},"AZ":{"x":321.2,"y":361.7},"CA":{"x":210,"y":310},"CO":{"x":432.4,"y":273.5},"NV":{"x":259.8,"y":268.7},"NM":{"x":418.2,"y":368.0},"OR":{"x":224.9,"y":136.1},"UT":{"x":338.7,"y":260.3},"WY":{"x":407.9,"y":190.1},"AR":{"x":650.1,"y":357.2},"IA":{"x":620.9,"y":211.2},"KS":{"x":548.7,"y":286.6},"MO":{"x":652.5,"y":293.9},"NE":{"x":526.9,"y":228.9},"OK":{"x":555,"y":345.4},"SD":{"x":517.7,"y":169.9},"LA":{"x":668,"y":418},"TX":{"x":520.3,"y":434.3},"CT":{"x":938,"y":158},"NH":{"x":935,"y":108},"RI":{"x":950,"y":167},"VT":{"x":912,"y":96},"AL":{"x":750.7,"y":388.6},"FL":{"x":835,"y":478},"GA":{"x":805.2,"y":376.2},"MS":{"x":696.7,"y":394.7},"SC":{"x":839.4,"y":351.1},"IL":{"x":685.8,"y":255.0},"IN":{"x":735.3,"y":247.1},"KY":{"x":760,"y":290.0},"NC":{"x":852,"y":308},"OH":{"x":784.7,"y":224.2},"TN":{"x":750.8,"y":321.3},"VA":{"x":850,"y":272},"WI":{"x":664.2,"y":151.8},"WV":{"x":832,"y":250},"DE":{"x":905,"y":247},"DC":{"x":880,"y":243},"MD":{"x":900,"y":238},"NJ":{"x":915,"y":210},"NY":{"x":893,"y":145},"PA":{"x":867,"y":194.0},"ME":{"x":952.8,"y":75},"MI":{"x":730,"y":168},"AK":{"x":161.1,"y":497.8}};
+    const US_LABEL_POSITIONS = {"MA":{"x":938.6,"y":137.3},"MN":{"x":610.6,"y":124.9},"MT":{"x":386.3,"y":103.9},"ND":{"x":517.3,"y":104.7},"HI":{"x":375,"y":520},"ID":{"x":314.3,"y":147.8},"WA":{"x":243.3,"y":71.0},"AZ":{"x":321.2,"y":361.7},"CA":{"x":210,"y":310},"CO":{"x":432.4,"y":273.5},"NV":{"x":259.8,"y":268.7},"NM":{"x":418.2,"y":368.0},"OR":{"x":224.9,"y":136.1},"UT":{"x":338.7,"y":260.3},"WY":{"x":407.9,"y":190.1},"AR":{"x":650.1,"y":357.2},"IA":{"x":620.9,"y":211.2},"KS":{"x":548.7,"y":286.6},"MO":{"x":652.5,"y":293.9},"NE":{"x":526.9,"y":228.9},"OK":{"x":555,"y":345.4},"SD":{"x":517.7,"y":169.9},"LA":{"x":685,"y":440},"TX":{"x":520.3,"y":434.3},"CT":{"x":938,"y":158},"NH":{"x":935,"y":108},"RI":{"x":950,"y":167},"VT":{"x":912,"y":96},"AL":{"x":750.7,"y":388.6},"FL":{"x":845,"y":500},"GA":{"x":805.2,"y":376.2},"MS":{"x":696.7,"y":394.7},"SC":{"x":839.4,"y":351.1},"IL":{"x":685.8,"y":255.0},"IN":{"x":735.3,"y":247.1},"KY":{"x":760,"y":290.0},"NC":{"x":852,"y":308},"OH":{"x":784.7,"y":224.2},"TN":{"x":750.8,"y":321.3},"VA":{"x":850,"y":272},"WI":{"x":664.2,"y":151.8},"WV":{"x":832,"y":250},"DE":{"x":905,"y":247},"DC":{"x":880,"y":243},"MD":{"x":900,"y":238},"NJ":{"x":915,"y":210},"NY":{"x":893,"y":145},"PA":{"x":867,"y":194.0},"ME":{"x":952.8,"y":75},"MI":{"x":730,"y":168},"AK":{"x":161.1,"y":497.8}};
 
     const FILL_OPACITY = 0.55;
 
@@ -550,9 +551,7 @@
       selectedColor: '#D0BCFF',
       visited: { us: {}, world: {} },
       svgCache: {},
-      // viewBox-based zoom/pan state
-      vb: null,        // current viewBox {x, y, w, h}
-      vbDefault: null,  // original viewBox for reset
+      zoom: 1,
     };
 
     const mapContainer = document.getElementById('mapContainer');
@@ -587,174 +586,77 @@
     });
 
     // =============================================
-    // ViewBox-based zoom & pan
+    // CSS transform-based zoom (no panning)
     // =============================================
-    function applyViewBox() {
+    const MIN_ZOOM = 1;
+    const MAX_ZOOM = 8;
+
+    function applyZoom() {
       const svg = mapContainer.querySelector('svg');
-      if (!svg || !state.vb) return;
-      svg.setAttribute('viewBox', `${state.vb.x} ${state.vb.y} ${state.vb.w} ${state.vb.h}`);
+      if (!svg) return;
+      svg.style.transform = `scale(${state.zoom})`;
+    }
+
+    function setZoom(newZoom, originX, originY) {
+      const svg = mapContainer.querySelector('svg');
+      if (!svg) return;
+      state.zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newZoom));
+      if (originX !== undefined && originY !== undefined) {
+        const rect = svg.getBoundingClientRect();
+        const pctX = ((originX - rect.left) / rect.width) * 100;
+        const pctY = ((originY - rect.top) / rect.height) * 100;
+        svg.style.transformOrigin = `${pctX}% ${pctY}%`;
+      }
+      applyZoom();
     }
 
     function resetView() {
-      if (state.vbDefault) {
-        state.vb = { ...state.vbDefault };
-        applyViewBox();
-      }
-    }
-
-    // Convert client (screen) coordinates to SVG viewBox coordinates
-    function clientToSvg(clientX, clientY) {
       const svg = mapContainer.querySelector('svg');
-      if (!svg || !state.vb) return { x: 0, y: 0 };
-      const rect = svg.getBoundingClientRect();
-      const fracX = (clientX - rect.left) / rect.width;
-      const fracY = (clientY - rect.top) / rect.height;
-      return {
-        x: state.vb.x + fracX * state.vb.w,
-        y: state.vb.y + fracY * state.vb.h,
-      };
+      if (!svg) return;
+      state.zoom = 1;
+      svg.style.transformOrigin = 'center center';
+      applyZoom();
     }
 
-    function zoomAtPoint(factor, cx, cy) {
-      if (!state.vb) return;
-      // cx, cy are in SVG viewBox coordinates — the point that should stay fixed
-      const newW = state.vbDefault.w / factor;
-      const newH = state.vbDefault.h / factor;
-      // Clamp: don't zoom out past original, max ~20x zoom
-      const minW = state.vbDefault.w / 20;
-      const clampedW = Math.max(minW, Math.min(state.vbDefault.w, newW));
-      const clampedH = Math.max(state.vbDefault.h / 20, Math.min(state.vbDefault.h, clampedW * state.vbDefault.h / state.vbDefault.w));
-
-      // Keep the point (cx, cy) at the same fractional position in the viewport
-      const fracX = (cx - state.vb.x) / state.vb.w;
-      const fracY = (cy - state.vb.y) / state.vb.h;
-
-      state.vb.w = clampedW;
-      state.vb.h = clampedH;
-      state.vb.x = cx - fracX * state.vb.w;
-      state.vb.y = cy - fracY * state.vb.h;
-
-      applyViewBox();
-    }
-
-    function zoomBy(factor) {
-      if (!state.vb) return;
-      // Zoom centered on the current viewport center
-      const cx = state.vb.x + state.vb.w / 2;
-      const cy = state.vb.y + state.vb.h / 2;
-      const currentZoom = state.vbDefault.w / state.vb.w;
-      const newZoom = currentZoom * factor;
-      zoomAtPoint(newZoom, cx, cy);
-    }
-
-    document.getElementById('zoomIn').addEventListener('click', () => zoomBy(1.4));
-    document.getElementById('zoomOut').addEventListener('click', () => zoomBy(1 / 1.4));
+    document.getElementById('zoomIn').addEventListener('click', () => {
+      setZoom(state.zoom * 1.4);
+    });
+    document.getElementById('zoomOut').addEventListener('click', () => {
+      setZoom(state.zoom / 1.4);
+    });
     document.getElementById('zoomReset').addEventListener('click', resetView);
 
-    // --- Mouse wheel zoom ---
+    // --- Mouse wheel zoom (zoom toward cursor) ---
     mapContainer.addEventListener('wheel', (e) => {
       e.preventDefault();
-      if (!state.vb) return;
-      const svgPt = clientToSvg(e.clientX, e.clientY);
       const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
-      const currentZoom = state.vbDefault.w / state.vb.w;
-      zoomAtPoint(currentZoom * factor, svgPt.x, svgPt.y);
+      setZoom(state.zoom * factor, e.clientX, e.clientY);
     }, { passive: false });
-
-    // --- Pan (mouse drag & touch drag) ---
-    let panState = null;
-
-    mapContainer.addEventListener('mousedown', onPanStart);
-    mapContainer.addEventListener('touchstart', onPanStart, { passive: false });
-
-    function onPanStart(e) {
-      const point = e.touches ? e.touches[0] : e;
-      const isTouch = !!e.touches;
-
-      // For touch with 2+ fingers, let pinch handler deal with it
-      if (e.touches && e.touches.length >= 2) return;
-
-      panState = {
-        startClientX: point.clientX,
-        startClientY: point.clientY,
-        startVbX: state.vb.x,
-        startVbY: state.vb.y,
-        moved: false,
-        isTouch: isTouch,
-      };
-
-      if (!isTouch) e.preventDefault();
-    }
-
-    window.addEventListener('mousemove', onPanMove);
-    window.addEventListener('touchmove', onPanMove, { passive: false });
-
-    function onPanMove(e) {
-      if (!panState) return;
-      // If pinch started, abort pan
-      if (e.touches && e.touches.length >= 2) { panState = null; return; }
-
-      const point = e.touches ? e.touches[0] : e;
-      const svg = mapContainer.querySelector('svg');
-      if (!svg || !state.vb) return;
-      const rect = svg.getBoundingClientRect();
-
-      const dx = (point.clientX - panState.startClientX) / rect.width * state.vb.w;
-      const dy = (point.clientY - panState.startClientY) / rect.height * state.vb.h;
-
-      if (Math.abs(point.clientX - panState.startClientX) > 3 ||
-          Math.abs(point.clientY - panState.startClientY) > 3) {
-        panState.moved = true;
-      }
-
-      state.vb.x = panState.startVbX - dx;
-      state.vb.y = panState.startVbY - dy;
-      applyViewBox();
-      e.preventDefault();
-    }
-
-    window.addEventListener('mouseup', onPanEnd);
-    window.addEventListener('touchend', onPanEnd);
-    window.addEventListener('touchcancel', onPanEnd);
-
-    function onPanEnd() {
-      panState = null;
-    }
 
     // --- Pinch to zoom (mobile) ---
     let pinchState = null;
 
-    mapContainer.addEventListener('touchstart', onPinchStart, { passive: false });
-
-    function onPinchStart(e) {
+    mapContainer.addEventListener('touchstart', (e) => {
       if (e.touches.length === 2) {
         e.preventDefault();
-        panState = null; // cancel any pan
         const t0 = e.touches[0], t1 = e.touches[1];
-        const dist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
-        const midX = (t0.clientX + t1.clientX) / 2;
-        const midY = (t0.clientY + t1.clientY) / 2;
-        const svgMid = clientToSvg(midX, midY);
         pinchState = {
-          startDist: dist,
-          startZoom: state.vbDefault.w / state.vb.w,
-          centerX: svgMid.x,
-          centerY: svgMid.y,
+          startDist: Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY),
+          startZoom: state.zoom,
+          midX: (t0.clientX + t1.clientX) / 2,
+          midY: (t0.clientY + t1.clientY) / 2,
         };
       }
-    }
+    }, { passive: false });
 
-    window.addEventListener('touchmove', onPinchMove, { passive: false });
-
-    function onPinchMove(e) {
+    window.addEventListener('touchmove', (e) => {
       if (!pinchState || e.touches.length < 2) return;
       e.preventDefault();
       const t0 = e.touches[0], t1 = e.touches[1];
       const dist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
       const scale = dist / pinchState.startDist;
-      const newZoom = pinchState.startZoom * scale;
-      zoomAtPoint(newZoom, pinchState.centerX, pinchState.centerY);
-    }
+      setZoom(pinchState.startZoom * scale, pinchState.midX, pinchState.midY);
+    }, { passive: false });
 
     window.addEventListener('touchend', (e) => {
       if (e.touches.length < 2) pinchState = null;
@@ -782,9 +684,6 @@
 
     // --- Click to color ---
     mapContainer.addEventListener('click', (e) => {
-      // Don't color if user was panning
-      if (panState && panState.moved) return;
-
       const path = e.target.closest('path[data-name]');
       if (!path) return;
       const id = path.id || path.getAttribute('data-id');
@@ -805,13 +704,6 @@
       updateStats();
       saveToLocalStorage();
     });
-
-    // Prevent click from firing after a drag
-    mapContainer.addEventListener('click', (e) => {
-      if (panState && panState.moved) {
-        e.stopPropagation();
-      }
-    }, true);
 
     // --- Stats ---
     function updateStats() {
@@ -868,15 +760,15 @@
           svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
         }
 
-        // Parse the native viewBox — this is our zoom/pan basis
-        const vbParts = svg.getAttribute('viewBox').split(/\s+/).map(Number);
-        state.vbDefault = { x: vbParts[0], y: vbParts[1], w: vbParts[2], h: vbParts[3] };
-        state.vb = { ...state.vbDefault };
-
         // Let the SVG fill its container via CSS, remove fixed dimensions
         svg.removeAttribute('width');
         svg.removeAttribute('height');
         svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+
+        // Reset zoom for new map
+        state.zoom = 1;
+        svg.style.transformOrigin = 'center center';
+        svg.style.transition = 'transform 0.15s ease-out';
 
         // Set default fills — M3 dark surface tones
         svg.querySelectorAll('path').forEach(path => {
