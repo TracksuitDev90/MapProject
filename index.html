@@ -4,13 +4,76 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Where I've Been — Interactive Visited Map</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
+    /* ========================================
+       Material Design 3 — Dark Theme
+       Purple / Black palette
+       ======================================== */
+
+    :root {
+      /* M3 Color Roles — custom purple-black scheme */
+      --md-primary: #D0BCFF;
+      --md-on-primary: #381E72;
+      --md-primary-container: #4F378B;
+      --md-on-primary-container: #EADDFF;
+      --md-secondary: #CCC2DC;
+      --md-on-secondary: #332D41;
+      --md-secondary-container: #4A4458;
+      --md-on-secondary-container: #E8DEF8;
+      --md-tertiary: #EFB8C8;
+      --md-on-tertiary: #492532;
+      --md-tertiary-container: #633B48;
+      --md-on-tertiary-container: #FFD8E4;
+      --md-error: #F2B8B5;
+      --md-on-error: #601410;
+      --md-error-container: #8C1D18;
+      --md-on-error-container: #F9DEDC;
+
+      /* Surfaces — very dark, near-black */
+      --md-surface: #0E0B13;
+      --md-surface-dim: #0E0B13;
+      --md-surface-bright: #3B3841;
+      --md-surface-container-lowest: #090710;
+      --md-surface-container-low: #1D1A25;
+      --md-surface-container: #211F2B;
+      --md-surface-container-high: #2C2935;
+      --md-surface-container-highest: #373440;
+      --md-on-surface: #E6E0E9;
+      --md-on-surface-variant: #CAC4D0;
+      --md-outline: #938F99;
+      --md-outline-variant: #49454F;
+
+      /* M3 Shape scale */
+      --md-shape-none: 0px;
+      --md-shape-xs: 4px;
+      --md-shape-sm: 8px;
+      --md-shape-md: 12px;
+      --md-shape-lg: 16px;
+      --md-shape-xl: 28px;
+      --md-shape-full: 9999px;
+
+      /* M3 Elevation surface tint (purple tint at varying opacities) */
+      --md-elevation-1: rgba(208, 188, 255, 0.05);
+      --md-elevation-2: rgba(208, 188, 255, 0.08);
+      --md-elevation-3: rgba(208, 188, 255, 0.11);
+      --md-elevation-4: rgba(208, 188, 255, 0.12);
+      --md-elevation-5: rgba(208, 188, 255, 0.14);
+
+      /* M3 State layers */
+      --md-state-hover: 0.08;
+      --md-state-focus: 0.12;
+      --md-state-press: 0.12;
+    }
+
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #1a1a2e;
-      color: #e0e0e0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--md-surface);
+      color: var(--md-on-surface);
       height: 100vh;
       display: flex;
       flex-direction: column;
@@ -19,144 +82,200 @@
       touch-action: none;
     }
 
+    /* --- Header: M3 top app bar (surface-container) --- */
     header {
       text-align: center;
-      padding: 12px 20px 8px;
+      padding: 16px 24px 8px;
       width: 100%;
       z-index: 10;
-      background: rgba(26, 26, 46, 0.95);
+      background: var(--md-surface-container);
       flex-shrink: 0;
     }
 
     header h1 {
-      font-size: 1.4rem;
-      font-weight: 600;
-      color: #e0e0e0;
-      letter-spacing: 0.5px;
+      font-size: 1.375rem;
+      font-weight: 500;
+      color: var(--md-on-surface);
+      letter-spacing: 0;
     }
 
+    /* --- Toolbar: elevated surface strip --- */
     .toolbar {
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 16px;
-      padding: 8px 20px;
+      padding: 10px 24px;
       flex-wrap: wrap;
-      background: rgba(26, 26, 46, 0.95);
+      background: var(--md-surface-container);
       z-index: 10;
       width: 100%;
       flex-shrink: 0;
+      border-bottom: 1px solid var(--md-outline-variant);
     }
 
     .toolbar label {
-      font-size: 0.85rem;
-      color: #aaa;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: var(--md-on-surface-variant);
+      letter-spacing: 0.1px;
     }
 
+    /* --- Segmented button (M3 map tabs) --- */
     .map-tabs {
       display: flex;
-      gap: 4px;
+      gap: 0;
+      border: 1px solid var(--md-outline);
+      border-radius: var(--md-shape-full);
+      overflow: hidden;
     }
 
     .map-tabs button {
-      padding: 6px 16px;
-      border: 1px solid #444;
+      padding: 8px 20px;
+      border: none;
+      border-right: 1px solid var(--md-outline);
       background: transparent;
-      color: #ccc;
-      border-radius: 4px;
+      color: var(--md-on-surface);
+      border-radius: 0;
       cursor: pointer;
-      font-size: 0.85rem;
-      transition: all 0.2s;
+      font-family: inherit;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      letter-spacing: 0.1px;
+      transition: background 0.2s, color 0.2s;
+      position: relative;
+    }
+
+    .map-tabs button:last-child {
+      border-right: none;
     }
 
     .map-tabs button.active {
-      background: #4a6fa5;
-      color: #fff;
-      border-color: #4a6fa5;
+      background: var(--md-secondary-container);
+      color: var(--md-on-secondary-container);
     }
 
     .map-tabs button:hover:not(.active) {
-      background: #333;
+      background: rgba(208, 188, 255, 0.08);
     }
 
+    /* --- Color picker --- */
     .color-picker-wrapper {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
     }
 
     .color-picker-wrapper input[type="color"] {
-      width: 32px;
-      height: 32px;
-      border: 2px solid #555;
-      border-radius: 4px;
+      width: 36px;
+      height: 36px;
+      border: 2px solid var(--md-outline-variant);
+      border-radius: var(--md-shape-sm);
       cursor: pointer;
       background: none;
       padding: 0;
+      transition: border-color 0.2s;
+    }
+
+    .color-picker-wrapper input[type="color"]:hover {
+      border-color: var(--md-outline);
     }
 
     .color-picker-wrapper input[type="color"]::-webkit-color-swatch-wrapper {
-      padding: 2px;
+      padding: 3px;
     }
 
     .color-picker-wrapper input[type="color"]::-webkit-color-swatch {
       border: none;
-      border-radius: 2px;
+      border-radius: var(--md-shape-xs);
     }
 
+    /* --- Preset color chips --- */
     .preset-colors {
       display: flex;
-      gap: 4px;
+      gap: 6px;
     }
 
     .preset-color {
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
+      width: 28px;
+      height: 28px;
+      border-radius: var(--md-shape-full);
       border: 2px solid transparent;
       cursor: pointer;
-      transition: border-color 0.2s, transform 0.2s;
+      transition: border-color 0.2s, transform 0.15s, box-shadow 0.2s;
     }
 
-    .preset-color:hover, .preset-color.active {
-      border-color: #fff;
-      transform: scale(1.15);
+    .preset-color:hover {
+      border-color: var(--md-on-surface-variant);
+      transform: scale(1.12);
     }
 
+    .preset-color.active {
+      border-color: var(--md-primary);
+      transform: scale(1.12);
+      box-shadow: 0 0 0 2px var(--md-surface-container), 0 0 0 4px var(--md-primary);
+    }
+
+    /* --- M3 Buttons --- */
     .btn {
-      padding: 6px 14px;
-      border: 1px solid #444;
+      padding: 0 24px;
+      height: 40px;
+      border: 1px solid var(--md-outline);
       background: transparent;
-      color: #ccc;
-      border-radius: 4px;
+      color: var(--md-primary);
+      border-radius: var(--md-shape-full);
       cursor: pointer;
-      font-size: 0.8rem;
-      transition: all 0.2s;
+      font-family: inherit;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      letter-spacing: 0.1px;
+      transition: background 0.2s, box-shadow 0.2s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .btn:hover {
-      background: #333;
+      background: rgba(208, 188, 255, 0.08);
     }
 
+    .btn:active {
+      background: rgba(208, 188, 255, 0.12);
+    }
+
+    /* Filled button (M3 filled) */
     .btn-primary {
-      background: #4a6fa5;
-      color: #fff;
-      border-color: #4a6fa5;
+      background: var(--md-primary);
+      color: var(--md-on-primary);
+      border: none;
     }
 
     .btn-primary:hover {
-      background: #3a5f95;
+      background: var(--md-primary);
+      box-shadow: 0 1px 3px 1px rgba(0,0,0,0.3), 0 1px 2px 0 rgba(0,0,0,0.3);
+      filter: brightness(1.08);
     }
 
+    .btn-primary:active {
+      box-shadow: none;
+      filter: brightness(0.92);
+    }
+
+    /* Danger / Error tonal button */
     .btn-danger {
-      border-color: #a54a4a;
-      color: #e08080;
+      border-color: var(--md-error);
+      color: var(--md-error);
     }
 
     .btn-danger:hover {
-      background: #3a1a1a;
+      background: rgba(242, 184, 181, 0.08);
     }
 
+    .btn-danger:active {
+      background: rgba(242, 184, 181, 0.12);
+    }
+
+    /* --- Map container --- */
     .map-container {
       flex: 1;
       width: 100%;
@@ -166,6 +285,7 @@
       overflow: hidden;
       position: relative;
       touch-action: none;
+      background: var(--md-surface-dim);
     }
 
     .map-container svg {
@@ -180,73 +300,92 @@
     }
 
     .map-container svg path[data-name]:hover {
-      stroke: #fff !important;
+      stroke: var(--md-primary) !important;
       stroke-width: 1.5 !important;
-      filter: brightness(1.15);
+      filter: brightness(1.2);
     }
 
     .map-container svg text.state-label {
       pointer-events: none;
       user-select: none;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     }
 
+    /* --- Zoom controls: M3 small FABs --- */
     .zoom-controls {
       position: fixed;
-      bottom: 20px;
-      right: 20px;
+      bottom: 24px;
+      right: 24px;
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 8px;
       z-index: 10;
     }
 
     .zoom-controls button {
-      width: 36px;
-      height: 36px;
-      border: 1px solid #444;
-      background: rgba(26, 26, 46, 0.9);
-      color: #ccc;
-      font-size: 1.2rem;
-      border-radius: 4px;
+      width: 40px;
+      height: 40px;
+      border: none;
+      background: var(--md-surface-container-high);
+      color: var(--md-primary);
+      font-size: 1.25rem;
+      border-radius: var(--md-shape-md);
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
+      box-shadow: 0 1px 3px 1px rgba(0,0,0,0.25), 0 1px 2px 0 rgba(0,0,0,0.3);
+      transition: background 0.2s, box-shadow 0.2s;
     }
 
     .zoom-controls button:hover {
-      background: #333;
+      background: var(--md-surface-container-highest);
+      box-shadow: 0 2px 6px 2px rgba(0,0,0,0.25), 0 1px 2px 0 rgba(0,0,0,0.3);
     }
 
+    .zoom-controls button:active {
+      background: var(--md-surface-container-highest);
+      box-shadow: 0 1px 3px 1px rgba(0,0,0,0.25);
+    }
+
+    /* --- Tooltip: M3 plain tooltip --- */
     .tooltip {
       position: fixed;
-      background: rgba(0, 0, 0, 0.85);
-      color: #fff;
-      padding: 6px 10px;
-      border-radius: 4px;
-      font-size: 0.8rem;
+      background: var(--md-on-surface);
+      color: var(--md-surface);
+      padding: 6px 12px;
+      border-radius: var(--md-shape-xs);
+      font-size: 0.75rem;
+      font-weight: 500;
       pointer-events: none;
       z-index: 100;
       display: none;
       white-space: nowrap;
+      letter-spacing: 0.1px;
     }
 
+    /* --- Stats chip --- */
     .stats {
-      font-size: 0.85rem;
-      color: #888;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: var(--md-on-surface-variant);
+      background: var(--md-surface-container-high);
+      padding: 6px 16px;
+      border-radius: var(--md-shape-full);
+      letter-spacing: 0.1px;
     }
 
     .stats span {
-      color: #4a6fa5;
+      color: var(--md-primary);
       font-weight: 600;
     }
 
+    /* --- Share modal: M3 dialog --- */
     .share-modal {
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, 0.6);
+      background: rgba(0, 0, 0, 0.5);
       z-index: 200;
       align-items: center;
       justify-content: center;
@@ -257,48 +396,70 @@
     }
 
     .share-modal-content {
-      background: #2a2a3e;
-      border: 1px solid #444;
-      border-radius: 8px;
+      background: var(--md-surface-container-high);
+      border: none;
+      border-radius: var(--md-shape-xl);
       padding: 24px;
       max-width: 500px;
       width: 90%;
+      box-shadow: 0 8px 12px 6px rgba(0,0,0,0.25), 0 4px 4px 0 rgba(0,0,0,0.3);
     }
 
     .share-modal-content h2 {
-      font-size: 1.1rem;
-      margin-bottom: 12px;
+      font-size: 1.25rem;
+      font-weight: 500;
+      color: var(--md-on-surface);
+      margin-bottom: 16px;
     }
 
     .share-modal-content textarea {
       width: 100%;
       height: 80px;
-      background: #1a1a2e;
-      border: 1px solid #444;
-      color: #e0e0e0;
-      border-radius: 4px;
-      padding: 8px;
+      background: var(--md-surface-container-lowest);
+      border: 1px solid var(--md-outline-variant);
+      color: var(--md-on-surface);
+      border-radius: var(--md-shape-sm);
+      padding: 12px;
       font-size: 0.75rem;
       resize: none;
       font-family: monospace;
+      transition: border-color 0.2s;
+    }
+
+    .share-modal-content textarea:focus {
+      outline: none;
+      border-color: var(--md-primary);
+      border-width: 2px;
+      padding: 11px;
     }
 
     .share-modal-content .btn-row {
       display: flex;
       gap: 8px;
-      margin-top: 12px;
+      margin-top: 24px;
       justify-content: flex-end;
     }
 
+    /* --- Footer --- */
     footer {
       text-align: center;
-      padding: 6px;
-      font-size: 0.7rem;
-      color: #555;
+      padding: 8px;
+      font-size: 0.6875rem;
+      color: var(--md-outline);
       z-index: 10;
-      background: rgba(26, 26, 46, 0.95);
+      background: var(--md-surface-container);
       width: 100%;
       flex-shrink: 0;
+      letter-spacing: 0.1px;
+    }
+
+    footer a {
+      color: var(--md-on-surface-variant);
+      transition: color 0.2s;
+    }
+
+    footer a:hover {
+      color: var(--md-primary);
     }
   </style>
 </head>
@@ -315,14 +476,14 @@
 
     <div class="color-picker-wrapper">
       <label>Color:</label>
-      <input type="color" id="colorPicker" value="#4a90d9">
+      <input type="color" id="colorPicker" value="#D0BCFF">
       <div class="preset-colors">
-        <div class="preset-color active" style="background:#4a90d9" data-color="#4a90d9"></div>
-        <div class="preset-color" style="background:#e74c3c" data-color="#e74c3c"></div>
-        <div class="preset-color" style="background:#2ecc71" data-color="#2ecc71"></div>
-        <div class="preset-color" style="background:#f39c12" data-color="#f39c12"></div>
-        <div class="preset-color" style="background:#9b59b6" data-color="#9b59b6"></div>
-        <div class="preset-color" style="background:#1abc9c" data-color="#1abc9c"></div>
+        <div class="preset-color active" style="background:#D0BCFF" data-color="#D0BCFF"></div>
+        <div class="preset-color" style="background:#EFB8C8" data-color="#EFB8C8"></div>
+        <div class="preset-color" style="background:#A8C7FA" data-color="#A8C7FA"></div>
+        <div class="preset-color" style="background:#7DCEA0" data-color="#7DCEA0"></div>
+        <div class="preset-color" style="background:#F4B860" data-color="#F4B860"></div>
+        <div class="preset-color" style="background:#CCC2DC" data-color="#CCC2DC"></div>
       </div>
     </div>
 
@@ -347,7 +508,7 @@
   <div class="share-modal" id="shareModal">
     <div class="share-modal-content">
       <h2>Share Your Map</h2>
-      <p style="font-size:0.85rem; color:#aaa; margin-bottom:12px;">
+      <p style="font-size:0.8125rem; color:var(--md-on-surface-variant); margin-bottom:16px; line-height:1.5;">
         Copy the link below to share your visited map. Anyone with this link will see your colored regions.
       </p>
       <textarea id="shareUrl" readonly></textarea>
@@ -359,8 +520,8 @@
   </div>
 
   <footer>
-    US map &copy; <a href="https://simplemaps.com" style="color:#666">Simplemaps.com</a> &mdash;
-    World map from <a href="https://github.com/johan/world.geo.json" style="color:#666">Natural Earth</a>
+    US map &copy; <a href="https://simplemaps.com">Simplemaps.com</a> &mdash;
+    World map from <a href="https://github.com/johan/world.geo.json">Natural Earth</a>
   </footer>
 
   <script>
@@ -369,23 +530,24 @@
     // =============================================
     const US_LABEL_POSITIONS = {"MA":{"x":938.6,"y":137.3},"MN":{"x":610.6,"y":124.9},"MT":{"x":386.3,"y":103.9},"ND":{"x":517.3,"y":104.7},"HI":{"x":375,"y":520},"ID":{"x":314.3,"y":147.8},"WA":{"x":243.3,"y":71.0},"AZ":{"x":321.2,"y":361.7},"CA":{"x":210,"y":310},"CO":{"x":432.4,"y":273.5},"NV":{"x":259.8,"y":268.7},"NM":{"x":418.2,"y":368.0},"OR":{"x":224.9,"y":136.1},"UT":{"x":338.7,"y":260.3},"WY":{"x":407.9,"y":190.1},"AR":{"x":650.1,"y":357.2},"IA":{"x":620.9,"y":211.2},"KS":{"x":548.7,"y":286.6},"MO":{"x":652.5,"y":293.9},"NE":{"x":526.9,"y":228.9},"OK":{"x":555,"y":345.4},"SD":{"x":517.7,"y":169.9},"LA":{"x":668,"y":418},"TX":{"x":520.3,"y":434.3},"CT":{"x":938,"y":158},"NH":{"x":935,"y":108},"RI":{"x":950,"y":167},"VT":{"x":912,"y":96},"AL":{"x":750.7,"y":388.6},"FL":{"x":835,"y":478},"GA":{"x":805.2,"y":376.2},"MS":{"x":696.7,"y":394.7},"SC":{"x":839.4,"y":351.1},"IL":{"x":685.8,"y":255.0},"IN":{"x":735.3,"y":247.1},"KY":{"x":760,"y":290.0},"NC":{"x":852,"y":308},"OH":{"x":784.7,"y":224.2},"TN":{"x":750.8,"y":321.3},"VA":{"x":850,"y":272},"WI":{"x":664.2,"y":151.8},"WV":{"x":832,"y":250},"DE":{"x":905,"y":247},"DC":{"x":880,"y":243},"MD":{"x":900,"y":238},"NJ":{"x":915,"y":210},"NY":{"x":893,"y":145},"PA":{"x":867,"y":194.0},"ME":{"x":952.8,"y":75},"MI":{"x":730,"y":168},"AK":{"x":161.1,"y":497.8}};
 
-    const FILL_OPACITY = 0.4;
+    const FILL_OPACITY = 0.55;
 
-    // Blend a hex color with white at given opacity, return solid hex color
-    // This avoids dark backgrounds bleeding through transparent fills
+    // Blend a hex color with the dark surface at given opacity, return solid hex color
     function tintColor(hex, opacity) {
       const r = parseInt(hex.slice(1, 3), 16);
       const g = parseInt(hex.slice(3, 5), 16);
       const b = parseInt(hex.slice(5, 7), 16);
-      const tr = Math.round(r * opacity + 255 * (1 - opacity));
-      const tg = Math.round(g * opacity + 255 * (1 - opacity));
-      const tb = Math.round(b * opacity + 255 * (1 - opacity));
+      // Blend against the dark surface (#0E0B13) instead of white
+      const sr = 14, sg = 11, sb = 19;
+      const tr = Math.round(r * opacity + sr * (1 - opacity));
+      const tg = Math.round(g * opacity + sg * (1 - opacity));
+      const tb = Math.round(b * opacity + sb * (1 - opacity));
       return '#' + [tr, tg, tb].map(c => c.toString(16).padStart(2, '0')).join('');
     }
 
     const state = {
       currentMap: 'us',
-      selectedColor: '#4a90d9',
+      selectedColor: '#D0BCFF',
       visited: { us: {}, world: {} },
       svgCache: {},
       // viewBox-based zoom/pan state
@@ -632,7 +794,7 @@
 
       if (mapData[id] === state.selectedColor) {
         delete mapData[id];
-        path.style.fill = state.currentMap === 'us' ? '#f9f9f9' : '#c0c0c0';
+        path.style.fill = state.currentMap === 'us' ? '#2C2935' : '#252230';
         path.style.fillOpacity = '1';
       } else {
         mapData[id] = state.selectedColor;
@@ -671,8 +833,8 @@
         text.setAttribute('class', 'state-label');
         text.setAttribute('font-size', '11');
         text.setAttribute('font-weight', '600');
-        text.setAttribute('fill', '#333');
-        text.setAttribute('stroke', '#fff');
+        text.setAttribute('fill', '#E6E0E9');
+        text.setAttribute('stroke', '#0E0B13');
         text.setAttribute('stroke-width', '2.5');
         text.setAttribute('paint-order', 'stroke');
         text.textContent = abbr;
@@ -682,7 +844,7 @@
 
     // --- Load SVG maps ---
     async function loadMap(mapType) {
-      mapContainer.innerHTML = '<p style="color:#888">Loading map...</p>';
+      mapContainer.innerHTML = '<p style="color:var(--md-on-surface-variant); font-weight:500;">Loading map...</p>';
 
       try {
         let svgText;
@@ -716,12 +878,12 @@
         svg.removeAttribute('height');
         svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
 
-        // Set default fills
+        // Set default fills — M3 dark surface tones
         svg.querySelectorAll('path').forEach(path => {
-          const defaultFill = mapType === 'us' ? '#f9f9f9' : '#c0c0c0';
+          const defaultFill = mapType === 'us' ? '#2C2935' : '#252230';
           path.style.fill = defaultFill;
           path.style.fillOpacity = '1';
-          path.style.stroke = '#666';
+          path.style.stroke = '#49454F';
           path.style.strokeWidth = mapType === 'us' ? '0.8' : '0.5';
         });
 
@@ -745,7 +907,7 @@
 
         updateStats();
       } catch (err) {
-        mapContainer.innerHTML = `<p style="color:#e08080">Failed to load map: ${err.message}</p>`;
+        mapContainer.innerHTML = `<p style="color:var(--md-error); font-weight:500;">Failed to load map: ${err.message}</p>`;
         console.error(err);
       }
     }
