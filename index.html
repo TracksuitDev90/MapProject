@@ -14,7 +14,6 @@
        ======================================== */
 
     :root {
-      /* M3 Color Roles — custom purple-black scheme */
       --md-primary: #D0BCFF;
       --md-on-primary: #381E72;
       --md-primary-container: #4F378B;
@@ -24,18 +23,11 @@
       --md-secondary-container: #4A4458;
       --md-on-secondary-container: #E8DEF8;
       --md-tertiary: #EFB8C8;
-      --md-on-tertiary: #492532;
-      --md-tertiary-container: #633B48;
-      --md-on-tertiary-container: #FFD8E4;
       --md-error: #F2B8B5;
       --md-on-error: #601410;
-      --md-error-container: #8C1D18;
-      --md-on-error-container: #F9DEDC;
 
-      /* Surfaces — very dark, near-black */
       --md-surface: #0E0B13;
       --md-surface-dim: #0E0B13;
-      --md-surface-bright: #3B3841;
       --md-surface-container-lowest: #090710;
       --md-surface-container-low: #1D1A25;
       --md-surface-container: #211F2B;
@@ -46,26 +38,12 @@
       --md-outline: #938F99;
       --md-outline-variant: #49454F;
 
-      /* M3 Shape scale */
-      --md-shape-none: 0px;
       --md-shape-xs: 4px;
       --md-shape-sm: 8px;
       --md-shape-md: 12px;
       --md-shape-lg: 16px;
       --md-shape-xl: 28px;
       --md-shape-full: 9999px;
-
-      /* M3 Elevation surface tint (purple tint at varying opacities) */
-      --md-elevation-1: rgba(208, 188, 255, 0.05);
-      --md-elevation-2: rgba(208, 188, 255, 0.08);
-      --md-elevation-3: rgba(208, 188, 255, 0.11);
-      --md-elevation-4: rgba(208, 188, 255, 0.12);
-      --md-elevation-5: rgba(208, 188, 255, 0.14);
-
-      /* M3 State layers */
-      --md-state-hover: 0.08;
-      --md-state-focus: 0.12;
-      --md-state-press: 0.12;
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -77,53 +55,58 @@
       height: 100vh;
       display: flex;
       flex-direction: column;
-      align-items: center;
       overflow: hidden;
     }
 
-    /* --- Header: M3 top app bar (surface-container) --- */
+    /* --- Top bar: header + toolbar unified --- */
+    .top-bar {
+      z-index: 10;
+      width: 100%;
+      flex-shrink: 0;
+      background: var(--md-surface-container);
+      border-bottom: 1px solid var(--md-outline-variant);
+    }
+
     header {
       text-align: center;
-      padding: 16px 24px 8px;
-      width: 100%;
-      z-index: 10;
-      background: var(--md-surface-container);
-      flex-shrink: 0;
+      padding: 14px 24px 6px;
     }
 
     header h1 {
-      font-size: 1.375rem;
-      font-weight: 500;
+      font-size: 1.25rem;
+      font-weight: 600;
       color: var(--md-on-surface);
-      letter-spacing: 0;
+      letter-spacing: -0.2px;
     }
 
-    /* --- Toolbar: elevated surface strip --- */
     .toolbar {
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 16px;
-      padding: 10px 24px;
+      gap: 20px;
+      padding: 10px 24px 14px;
       flex-wrap: wrap;
-      background: var(--md-surface-container);
-      z-index: 10;
-      width: 100%;
+    }
+
+    /* Toolbar group dividers */
+    .toolbar-divider {
+      width: 1px;
+      height: 24px;
+      background: var(--md-outline-variant);
       flex-shrink: 0;
-      border-bottom: 1px solid var(--md-outline-variant);
     }
 
     .toolbar label {
-      font-size: 0.8125rem;
+      font-size: 0.75rem;
       font-weight: 500;
       color: var(--md-on-surface-variant);
-      letter-spacing: 0.1px;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
     }
 
     /* --- Segmented button (M3 map tabs) --- */
     .map-tabs {
       display: flex;
-      gap: 0;
       border: 1px solid var(--md-outline);
       border-radius: var(--md-shape-full);
       overflow: hidden;
@@ -135,19 +118,15 @@
       border-right: 1px solid var(--md-outline);
       background: transparent;
       color: var(--md-on-surface);
-      border-radius: 0;
       cursor: pointer;
       font-family: inherit;
       font-size: 0.8125rem;
       font-weight: 500;
       letter-spacing: 0.1px;
       transition: background 0.2s, color 0.2s;
-      position: relative;
     }
 
-    .map-tabs button:last-child {
-      border-right: none;
-    }
+    .map-tabs button:last-child { border-right: none; }
 
     .map-tabs button.active {
       background: var(--md-secondary-container);
@@ -158,16 +137,16 @@
       background: rgba(208, 188, 255, 0.08);
     }
 
-    /* --- Color picker --- */
+    /* --- Color picker group --- */
     .color-picker-wrapper {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
     }
 
     .color-picker-wrapper input[type="color"] {
-      width: 36px;
-      height: 36px;
+      width: 32px;
+      height: 32px;
       border: 2px solid var(--md-outline-variant);
       border-radius: var(--md-shape-sm);
       cursor: pointer;
@@ -181,44 +160,46 @@
     }
 
     .color-picker-wrapper input[type="color"]::-webkit-color-swatch-wrapper {
-      padding: 3px;
+      padding: 2px;
     }
 
     .color-picker-wrapper input[type="color"]::-webkit-color-swatch {
       border: none;
-      border-radius: var(--md-shape-xs);
+      border-radius: 3px;
     }
 
     /* --- Preset color chips --- */
     .preset-colors {
       display: flex;
-      gap: 6px;
+      gap: 10px;
+      align-items: center;
     }
 
     .preset-color {
-      width: 28px;
-      height: 28px;
+      width: 26px;
+      height: 26px;
       border-radius: var(--md-shape-full);
-      border: 2px solid transparent;
+      border: 2.5px solid transparent;
       cursor: pointer;
       transition: border-color 0.2s, transform 0.15s, box-shadow 0.2s;
+      flex-shrink: 0;
     }
 
     .preset-color:hover {
       border-color: var(--md-on-surface-variant);
-      transform: scale(1.12);
+      transform: scale(1.15);
     }
 
     .preset-color.active {
       border-color: var(--md-primary);
-      transform: scale(1.12);
+      transform: scale(1.15);
       box-shadow: 0 0 0 2px var(--md-surface-container), 0 0 0 4px var(--md-primary);
     }
 
     /* --- M3 Buttons --- */
     .btn {
       padding: 0 24px;
-      height: 40px;
+      height: 36px;
       border: 1px solid var(--md-outline);
       background: transparent;
       color: var(--md-primary);
@@ -232,17 +213,12 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
+      white-space: nowrap;
     }
 
-    .btn:hover {
-      background: rgba(208, 188, 255, 0.08);
-    }
+    .btn:hover { background: rgba(208, 188, 255, 0.08); }
+    .btn:active { background: rgba(208, 188, 255, 0.12); }
 
-    .btn:active {
-      background: rgba(208, 188, 255, 0.12);
-    }
-
-    /* Filled button (M3 filled) */
     .btn-primary {
       background: var(--md-primary);
       color: var(--md-on-primary);
@@ -251,7 +227,7 @@
 
     .btn-primary:hover {
       background: var(--md-primary);
-      box-shadow: 0 1px 3px 1px rgba(0,0,0,0.3), 0 1px 2px 0 rgba(0,0,0,0.3);
+      box-shadow: 0 1px 3px 1px rgba(0,0,0,0.3);
       filter: brightness(1.08);
     }
 
@@ -260,38 +236,35 @@
       filter: brightness(0.92);
     }
 
-    /* Danger / Error tonal button */
     .btn-danger {
       border-color: var(--md-error);
       color: var(--md-error);
     }
 
-    .btn-danger:hover {
-      background: rgba(242, 184, 181, 0.08);
-    }
-
-    .btn-danger:active {
-      background: rgba(242, 184, 181, 0.12);
-    }
+    .btn-danger:hover { background: rgba(242, 184, 181, 0.08); }
+    .btn-danger:active { background: rgba(242, 184, 181, 0.12); }
 
     /* --- Map container --- */
     .map-container {
       flex: 1;
       width: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
       overflow: hidden;
       position: relative;
-      touch-action: none;
       background: var(--md-surface-dim);
+      cursor: grab;
+      touch-action: none;
     }
 
+    .map-container.grabbing { cursor: grabbing; }
+
     .map-container svg {
+      position: absolute;
+      top: 0;
+      left: 0;
       width: 100%;
       height: 100%;
       display: block;
-      transform-origin: center center;
+      transform-origin: 0 0;
       will-change: transform;
     }
 
@@ -303,7 +276,7 @@
     .map-container svg path[data-name]:hover {
       stroke: var(--md-primary) !important;
       stroke-width: 1.5 !important;
-      filter: brightness(1.2);
+      filter: brightness(1.25);
     }
 
     .map-container svg text.state-label {
@@ -315,41 +288,42 @@
     /* --- Zoom controls: M3 small FABs --- */
     .zoom-controls {
       position: fixed;
-      bottom: 24px;
-      right: 24px;
+      bottom: 48px;
+      right: 20px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 6px;
       z-index: 10;
     }
 
     .zoom-controls button {
-      width: 40px;
-      height: 40px;
+      width: 44px;
+      height: 44px;
       border: none;
       background: var(--md-surface-container-high);
       color: var(--md-primary);
-      font-size: 1.25rem;
+      font-size: 1.3rem;
       border-radius: var(--md-shape-md);
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 1px 3px 1px rgba(0,0,0,0.25), 0 1px 2px 0 rgba(0,0,0,0.3);
-      transition: background 0.2s, box-shadow 0.2s;
+      box-shadow: 0 2px 6px 2px rgba(0,0,0,0.2), 0 1px 2px 0 rgba(0,0,0,0.3);
+      transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
     }
 
     .zoom-controls button:hover {
       background: var(--md-surface-container-highest);
-      box-shadow: 0 2px 6px 2px rgba(0,0,0,0.25), 0 1px 2px 0 rgba(0,0,0,0.3);
+      box-shadow: 0 4px 8px 3px rgba(0,0,0,0.2), 0 1px 3px 0 rgba(0,0,0,0.3);
+      transform: scale(1.05);
     }
 
     .zoom-controls button:active {
-      background: var(--md-surface-container-highest);
+      transform: scale(0.95);
       box-shadow: 0 1px 3px 1px rgba(0,0,0,0.25);
     }
 
-    /* --- Tooltip: M3 plain tooltip --- */
+    /* --- Tooltip --- */
     .tooltip {
       position: fixed;
       background: var(--md-on-surface);
@@ -362,7 +336,6 @@
       z-index: 100;
       display: none;
       white-space: nowrap;
-      letter-spacing: 0.1px;
     }
 
     /* --- Stats chip --- */
@@ -373,7 +346,7 @@
       background: var(--md-surface-container-high);
       padding: 6px 16px;
       border-radius: var(--md-shape-full);
-      letter-spacing: 0.1px;
+      white-space: nowrap;
     }
 
     .stats span {
@@ -392,13 +365,10 @@
       justify-content: center;
     }
 
-    .share-modal.open {
-      display: flex;
-    }
+    .share-modal.open { display: flex; }
 
     .share-modal-content {
       background: var(--md-surface-container-high);
-      border: none;
       border-radius: var(--md-shape-xl);
       padding: 24px;
       max-width: 500px;
@@ -444,14 +414,13 @@
     /* --- Footer --- */
     footer {
       text-align: center;
-      padding: 8px;
+      padding: 6px 16px;
       font-size: 0.6875rem;
       color: var(--md-outline);
       z-index: 10;
       background: var(--md-surface-container);
       width: 100%;
       flex-shrink: 0;
-      letter-spacing: 0.1px;
     }
 
     footer a {
@@ -459,41 +428,45 @@
       transition: color 0.2s;
     }
 
-    footer a:hover {
-      color: var(--md-primary);
-    }
+    footer a:hover { color: var(--md-primary); }
   </style>
 </head>
 <body>
-  <header>
-    <h1>Where I've Been</h1>
-  </header>
+  <div class="top-bar">
+    <header>
+      <h1>Where I've Been</h1>
+    </header>
 
-  <div class="toolbar">
-    <div class="map-tabs">
-      <button class="active" data-map="us">US States</button>
-      <button data-map="world">World</button>
-    </div>
-
-    <div class="color-picker-wrapper">
-      <label>Color:</label>
-      <input type="color" id="colorPicker" value="#D0BCFF">
-      <div class="preset-colors">
-        <div class="preset-color active" style="background:#D0BCFF" data-color="#D0BCFF"></div>
-        <div class="preset-color" style="background:#EFB8C8" data-color="#EFB8C8"></div>
-        <div class="preset-color" style="background:#A8C7FA" data-color="#A8C7FA"></div>
-        <div class="preset-color" style="background:#7DCEA0" data-color="#7DCEA0"></div>
-        <div class="preset-color" style="background:#F4B860" data-color="#F4B860"></div>
-        <div class="preset-color" style="background:#CCC2DC" data-color="#CCC2DC"></div>
+    <div class="toolbar">
+      <div class="map-tabs">
+        <button class="active" data-map="us">US States</button>
+        <button data-map="world">World</button>
       </div>
-    </div>
 
-    <div class="stats" id="stats">
-      <span id="visitedCount">0</span> / <span id="totalCount">0</span> visited
-    </div>
+      <div class="toolbar-divider"></div>
 
-    <button class="btn btn-primary" id="shareBtn">Share / Save</button>
-    <button class="btn btn-danger" id="clearBtn">Clear All</button>
+      <div class="color-picker-wrapper">
+        <label>Color</label>
+        <input type="color" id="colorPicker" value="#D0BCFF">
+        <div class="preset-colors">
+          <div class="preset-color active" style="background:#D0BCFF" data-color="#D0BCFF"></div>
+          <div class="preset-color" style="background:#EFB8C8" data-color="#EFB8C8"></div>
+          <div class="preset-color" style="background:#A8C7FA" data-color="#A8C7FA"></div>
+          <div class="preset-color" style="background:#7DCEA0" data-color="#7DCEA0"></div>
+          <div class="preset-color" style="background:#F4B860" data-color="#F4B860"></div>
+          <div class="preset-color" style="background:#CCC2DC" data-color="#CCC2DC"></div>
+        </div>
+      </div>
+
+      <div class="toolbar-divider"></div>
+
+      <div class="stats" id="stats">
+        <span id="visitedCount">0</span> / <span id="totalCount">0</span> visited
+      </div>
+
+      <button class="btn btn-primary" id="shareBtn">Share / Save</button>
+      <button class="btn btn-danger" id="clearBtn">Clear All</button>
+    </div>
   </div>
 
   <div class="map-container" id="mapContainer"></div>
@@ -551,7 +524,10 @@
       selectedColor: '#D0BCFF',
       visited: { us: {}, world: {} },
       svgCache: {},
+      // Transform state: the SVG is positioned with translate(tx, ty) scale(zoom)
       zoom: 1,
+      tx: 0,
+      ty: 0,
     };
 
     const mapContainer = document.getElementById('mapContainer');
@@ -586,63 +562,142 @@
     });
 
     // =============================================
-    // CSS transform-based zoom (no panning)
+    // Pan + Zoom via CSS transform: translate() scale()
+    // transform-origin is always 0 0; we manage offset ourselves.
     // =============================================
     const MIN_ZOOM = 1;
-    const MAX_ZOOM = 8;
+    const MAX_ZOOM = 10;
 
-    function applyZoom() {
+    function applyTransform() {
       const svg = mapContainer.querySelector('svg');
       if (!svg) return;
-      svg.style.transform = `scale(${state.zoom})`;
+      svg.style.transform = `translate(${state.tx}px, ${state.ty}px) scale(${state.zoom})`;
     }
 
-    function setZoom(newZoom, originX, originY) {
-      const svg = mapContainer.querySelector('svg');
-      if (!svg) return;
-      state.zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newZoom));
-      if (originX !== undefined && originY !== undefined) {
-        const rect = svg.getBoundingClientRect();
-        const pctX = ((originX - rect.left) / rect.width) * 100;
-        const pctY = ((originY - rect.top) / rect.height) * 100;
-        svg.style.transformOrigin = `${pctX}% ${pctY}%`;
+    // Clamp translation so the map can't be dragged entirely off screen.
+    function clampTranslation() {
+      const cw = mapContainer.clientWidth;
+      const ch = mapContainer.clientHeight;
+      const sw = cw * state.zoom;
+      const sh = ch * state.zoom;
+      // Allow dragging until only 25% of the map remains visible
+      const margin = 0.25;
+      const minTx = -(sw - cw * margin);
+      const maxTx = cw * (1 - margin);
+      const minTy = -(sh - ch * margin);
+      const maxTy = ch * (1 - margin);
+      state.tx = Math.max(minTx, Math.min(maxTx, state.tx));
+      state.ty = Math.max(minTy, Math.min(maxTy, state.ty));
+    }
+
+    // Zoom toward a specific screen point (clientX, clientY)
+    function zoomAt(newZoom, clientX, clientY) {
+      const prevZoom = state.zoom;
+      newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newZoom));
+      if (newZoom === prevZoom) return;
+
+      const rect = mapContainer.getBoundingClientRect();
+      // Point in container coordinates
+      const cx = clientX - rect.left;
+      const cy = clientY - rect.top;
+
+      // The point in "SVG space" before zoom: (cx - tx) / prevZoom
+      // After zoom it should map back to the same screen point:
+      // tx_new = cx - (cx - tx_old) / prevZoom * newZoom
+      state.tx = cx - (cx - state.tx) / prevZoom * newZoom;
+      state.ty = cy - (cy - state.ty) / prevZoom * newZoom;
+      state.zoom = newZoom;
+
+      // If zoomed back to 1x, snap to origin
+      if (state.zoom <= 1) {
+        state.tx = 0;
+        state.ty = 0;
+      } else {
+        clampTranslation();
       }
-      applyZoom();
+
+      applyTransform();
+    }
+
+    // Zoom from center of container
+    function zoomCenter(factor) {
+      const rect = mapContainer.getBoundingClientRect();
+      zoomAt(state.zoom * factor, rect.left + rect.width / 2, rect.top + rect.height / 2);
     }
 
     function resetView() {
-      const svg = mapContainer.querySelector('svg');
-      if (!svg) return;
       state.zoom = 1;
-      svg.style.transformOrigin = 'center center';
-      applyZoom();
+      state.tx = 0;
+      state.ty = 0;
+      applyTransform();
     }
 
-    document.getElementById('zoomIn').addEventListener('click', () => {
-      setZoom(state.zoom * 1.4);
-    });
-    document.getElementById('zoomOut').addEventListener('click', () => {
-      setZoom(state.zoom / 1.4);
-    });
+    document.getElementById('zoomIn').addEventListener('click', () => zoomCenter(1.5));
+    document.getElementById('zoomOut').addEventListener('click', () => zoomCenter(1 / 1.5));
     document.getElementById('zoomReset').addEventListener('click', resetView);
 
-    // --- Mouse wheel zoom (zoom toward cursor) ---
+    // --- Mouse wheel zoom toward cursor ---
     mapContainer.addEventListener('wheel', (e) => {
       e.preventDefault();
-      const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
-      setZoom(state.zoom * factor, e.clientX, e.clientY);
+      const factor = e.deltaY < 0 ? 1.2 : 1 / 1.2;
+      zoomAt(state.zoom * factor, e.clientX, e.clientY);
     }, { passive: false });
 
-    // --- Pinch to zoom (mobile) ---
-    let pinchState = null;
+    // --- Pan (mouse drag) ---
+    let dragState = null;
+
+    mapContainer.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return;
+      dragState = {
+        startX: e.clientX,
+        startY: e.clientY,
+        startTx: state.tx,
+        startTy: state.ty,
+        moved: false,
+      };
+      mapContainer.classList.add('grabbing');
+      e.preventDefault();
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!dragState) return;
+      const dx = e.clientX - dragState.startX;
+      const dy = e.clientY - dragState.startY;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) dragState.moved = true;
+      state.tx = dragState.startTx + dx;
+      state.ty = dragState.startTy + dy;
+      clampTranslation();
+      applyTransform();
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (dragState) mapContainer.classList.remove('grabbing');
+      dragState = null;
+    });
+
+    // --- Touch: single-finger pan + two-finger pinch-zoom ---
+    let touchState = null;
 
     mapContainer.addEventListener('touchstart', (e) => {
-      if (e.touches.length === 2) {
+      if (e.touches.length === 1) {
+        const t = e.touches[0];
+        touchState = {
+          type: 'pan',
+          startX: t.clientX,
+          startY: t.clientY,
+          startTx: state.tx,
+          startTy: state.ty,
+          moved: false,
+        };
+      } else if (e.touches.length === 2) {
         e.preventDefault();
         const t0 = e.touches[0], t1 = e.touches[1];
-        pinchState = {
+        touchState = {
+          type: 'pinch',
           startDist: Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY),
           startZoom: state.zoom,
+          startTx: state.tx,
+          startTy: state.ty,
           midX: (t0.clientX + t1.clientX) / 2,
           midY: (t0.clientY + t1.clientY) / 2,
         };
@@ -650,16 +705,55 @@
     }, { passive: false });
 
     window.addEventListener('touchmove', (e) => {
-      if (!pinchState || e.touches.length < 2) return;
-      e.preventDefault();
-      const t0 = e.touches[0], t1 = e.touches[1];
-      const dist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
-      const scale = dist / pinchState.startDist;
-      setZoom(pinchState.startZoom * scale, pinchState.midX, pinchState.midY);
+      if (!touchState) return;
+
+      if (touchState.type === 'pan' && e.touches.length === 1) {
+        const t = e.touches[0];
+        const dx = t.clientX - touchState.startX;
+        const dy = t.clientY - touchState.startY;
+        if (Math.abs(dx) > 3 || Math.abs(dy) > 3) touchState.moved = true;
+        state.tx = touchState.startTx + dx;
+        state.ty = touchState.startTy + dy;
+        clampTranslation();
+        applyTransform();
+        e.preventDefault();
+      }
+
+      if (touchState.type === 'pinch' && e.touches.length >= 2) {
+        e.preventDefault();
+        const t0 = e.touches[0], t1 = e.touches[1];
+        const dist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+        const scale = dist / touchState.startDist;
+        const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, touchState.startZoom * scale));
+
+        // Zoom toward pinch midpoint
+        const rect = mapContainer.getBoundingClientRect();
+        const cx = touchState.midX - rect.left;
+        const cy = touchState.midY - rect.top;
+        state.tx = cx - (cx - touchState.startTx) / touchState.startZoom * newZoom;
+        state.ty = cy - (cy - touchState.startTy) / touchState.startZoom * newZoom;
+        state.zoom = newZoom;
+
+        if (state.zoom <= 1) { state.tx = 0; state.ty = 0; }
+        else clampTranslation();
+        applyTransform();
+      }
     }, { passive: false });
 
     window.addEventListener('touchend', (e) => {
-      if (e.touches.length < 2) pinchState = null;
+      if (e.touches.length === 0) touchState = null;
+      else if (e.touches.length === 1 && touchState && touchState.type === 'pinch') {
+        // Transition from pinch back to pan
+        const t = e.touches[0];
+        touchState = {
+          type: 'pan',
+          startX: t.clientX,
+          startY: t.clientY,
+          startTx: state.tx,
+          startTy: state.ty,
+          moved: true,
+        };
+      }
     });
 
     // --- Tooltip ---
@@ -682,8 +776,10 @@
       tooltip.style.display = 'none';
     });
 
-    // --- Click to color ---
+    // --- Click to color (suppress after drag) ---
     mapContainer.addEventListener('click', (e) => {
+      if (dragState && dragState.moved) return;
+      if (touchState && touchState.moved) return;
       const path = e.target.closest('path[data-name]');
       if (!path) return;
       const id = path.id || path.getAttribute('data-id');
@@ -765,10 +861,10 @@
         svg.removeAttribute('height');
         svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
 
-        // Reset zoom for new map
+        // Reset transform for new map
         state.zoom = 1;
-        svg.style.transformOrigin = 'center center';
-        svg.style.transition = 'transform 0.15s ease-out';
+        state.tx = 0;
+        state.ty = 0;
 
         // Set default fills — M3 dark surface tones
         svg.querySelectorAll('path').forEach(path => {
