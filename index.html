@@ -250,7 +250,7 @@
       width: 100%;
       overflow: hidden;
       position: relative;
-      background: var(--md-surface-dim);
+      background: radial-gradient(ellipse at 50% 40%, #16132a 0%, var(--md-surface-dim) 70%);
       cursor: grab;
       touch-action: none;
     }
@@ -266,17 +266,22 @@
       display: block;
       transform-origin: 0 0;
       will-change: transform;
+      transition: transform 0.18s ease-out;
+    }
+
+    .map-container.dragging svg {
+      transition: none;
     }
 
     .map-container svg path[data-name] {
       cursor: pointer;
-      transition: filter 0.15s;
+      transition: fill 0.2s ease, filter 0.2s ease, stroke 0.2s ease, stroke-width 0.2s ease;
     }
 
     .map-container svg path[data-name]:hover {
-      stroke: var(--md-primary) !important;
-      stroke-width: 1.5 !important;
-      filter: brightness(1.25);
+      stroke: rgba(230, 224, 233, 0.6) !important;
+      stroke-width: 1.8 !important;
+      filter: brightness(1.35) saturate(1.15);
     }
 
     .map-container svg text.state-label {
@@ -328,14 +333,22 @@
       position: fixed;
       background: var(--md-on-surface);
       color: var(--md-surface);
-      padding: 6px 12px;
-      border-radius: var(--md-shape-xs);
+      padding: 6px 14px;
+      border-radius: var(--md-shape-sm);
       font-size: 0.75rem;
       font-weight: 500;
       pointer-events: none;
       z-index: 100;
-      display: none;
+      opacity: 0;
+      transform: translateY(4px);
+      transition: opacity 0.15s ease, transform 0.15s ease;
       white-space: nowrap;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .tooltip.visible {
+      opacity: 1;
+      transform: translateY(0);
     }
 
     /* --- Stats chip --- */
@@ -356,16 +369,21 @@
 
     /* --- Share modal: M3 dialog --- */
     .share-modal {
-      display: none;
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, 0.5);
+      background: rgba(0, 0, 0, 0);
       z-index: 200;
+      display: flex;
       align-items: center;
       justify-content: center;
+      pointer-events: none;
+      transition: background 0.2s ease;
     }
 
-    .share-modal.open { display: flex; }
+    .share-modal.open {
+      background: rgba(0, 0, 0, 0.5);
+      pointer-events: auto;
+    }
 
     .share-modal-content {
       background: var(--md-surface-container-high);
@@ -374,6 +392,14 @@
       max-width: 500px;
       width: 90%;
       box-shadow: 0 8px 12px 6px rgba(0,0,0,0.25), 0 4px 4px 0 rgba(0,0,0,0.3);
+      transform: scale(0.92) translateY(12px);
+      opacity: 0;
+      transition: transform 0.25s cubic-bezier(0.2, 0, 0, 1), opacity 0.2s ease;
+    }
+
+    .share-modal.open .share-modal-content {
+      transform: scale(1) translateY(0);
+      opacity: 1;
     }
 
     .share-modal-content h2 {
@@ -429,6 +455,21 @@
     }
 
     footer a:hover { color: var(--md-primary); }
+
+    /* --- Spinner for loading --- */
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* --- Click pulse on region toggle --- */
+    @keyframes region-pulse {
+      0% { filter: brightness(1.6); }
+      100% { filter: brightness(1); }
+    }
+
+    .map-container svg path.pulse {
+      animation: region-pulse 0.35s ease-out;
+    }
   </style>
 </head>
 <body>
@@ -447,14 +488,14 @@
 
       <div class="color-picker-wrapper">
         <label>Color</label>
-        <input type="color" id="colorPicker" value="#D0BCFF">
+        <input type="color" id="colorPicker" value="#B794F6">
         <div class="preset-colors">
-          <div class="preset-color active" style="background:#D0BCFF" data-color="#D0BCFF"></div>
-          <div class="preset-color" style="background:#EFB8C8" data-color="#EFB8C8"></div>
-          <div class="preset-color" style="background:#A8C7FA" data-color="#A8C7FA"></div>
-          <div class="preset-color" style="background:#7DCEA0" data-color="#7DCEA0"></div>
-          <div class="preset-color" style="background:#F4B860" data-color="#F4B860"></div>
-          <div class="preset-color" style="background:#CCC2DC" data-color="#CCC2DC"></div>
+          <div class="preset-color active" style="background:#B794F6" data-color="#B794F6"></div>
+          <div class="preset-color" style="background:#F48FB1" data-color="#F48FB1"></div>
+          <div class="preset-color" style="background:#64B5F6" data-color="#64B5F6"></div>
+          <div class="preset-color" style="background:#66BB6A" data-color="#66BB6A"></div>
+          <div class="preset-color" style="background:#FFB74D" data-color="#FFB74D"></div>
+          <div class="preset-color" style="background:#4DD0E1" data-color="#4DD0E1"></div>
         </div>
       </div>
 
@@ -504,7 +545,7 @@
     // =============================================
     const US_LABEL_POSITIONS = {"MA":{"x":938.6,"y":137.3},"MN":{"x":610.6,"y":124.9},"MT":{"x":386.3,"y":103.9},"ND":{"x":517.3,"y":104.7},"HI":{"x":375,"y":520},"ID":{"x":314.3,"y":147.8},"WA":{"x":243.3,"y":71.0},"AZ":{"x":321.2,"y":361.7},"CA":{"x":210,"y":310},"CO":{"x":432.4,"y":273.5},"NV":{"x":259.8,"y":268.7},"NM":{"x":418.2,"y":368.0},"OR":{"x":224.9,"y":136.1},"UT":{"x":338.7,"y":260.3},"WY":{"x":407.9,"y":190.1},"AR":{"x":650.1,"y":357.2},"IA":{"x":620.9,"y":211.2},"KS":{"x":548.7,"y":286.6},"MO":{"x":652.5,"y":293.9},"NE":{"x":526.9,"y":228.9},"OK":{"x":555,"y":345.4},"SD":{"x":517.7,"y":169.9},"LA":{"x":685,"y":440},"TX":{"x":520.3,"y":434.3},"CT":{"x":938,"y":158},"NH":{"x":935,"y":108},"RI":{"x":950,"y":167},"VT":{"x":912,"y":96},"AL":{"x":750.7,"y":388.6},"FL":{"x":845,"y":500},"GA":{"x":805.2,"y":376.2},"MS":{"x":696.7,"y":394.7},"SC":{"x":839.4,"y":351.1},"IL":{"x":685.8,"y":255.0},"IN":{"x":735.3,"y":247.1},"KY":{"x":760,"y":290.0},"NC":{"x":852,"y":308},"OH":{"x":784.7,"y":224.2},"TN":{"x":750.8,"y":321.3},"VA":{"x":850,"y":272},"WI":{"x":664.2,"y":151.8},"WV":{"x":832,"y":250},"DE":{"x":905,"y":247},"DC":{"x":880,"y":243},"MD":{"x":900,"y":238},"NJ":{"x":915,"y":210},"NY":{"x":893,"y":145},"PA":{"x":867,"y":194.0},"ME":{"x":952.8,"y":75},"MI":{"x":730,"y":168},"AK":{"x":161.1,"y":497.8}};
 
-    const FILL_OPACITY = 0.55;
+    const FILL_OPACITY = 0.78;
 
     // Blend a hex color with the dark surface at given opacity, return solid hex color
     function tintColor(hex, opacity) {
@@ -521,7 +562,7 @@
 
     const state = {
       currentMap: 'us',
-      selectedColor: '#D0BCFF',
+      selectedColor: '#B794F6',
       visited: { us: {}, world: {} },
       svgCache: {},
       // Transform state: the SVG is positioned with translate(tx, ty) scale(zoom)
@@ -637,10 +678,14 @@
     document.getElementById('zoomReset').addEventListener('click', resetView);
 
     // --- Mouse wheel zoom toward cursor ---
+    let wheelTimeout = null;
     mapContainer.addEventListener('wheel', (e) => {
       e.preventDefault();
+      mapContainer.classList.add('dragging');
       const factor = e.deltaY < 0 ? 1.2 : 1 / 1.2;
       zoomAt(state.zoom * factor, e.clientX, e.clientY);
+      clearTimeout(wheelTimeout);
+      wheelTimeout = setTimeout(() => mapContainer.classList.remove('dragging'), 120);
     }, { passive: false });
 
     // --- Pan (mouse drag) ---
@@ -663,7 +708,10 @@
       if (!dragState) return;
       const dx = e.clientX - dragState.startX;
       const dy = e.clientY - dragState.startY;
-      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) dragState.moved = true;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+        dragState.moved = true;
+        mapContainer.classList.add('dragging');
+      }
       state.tx = dragState.startTx + dx;
       state.ty = dragState.startTy + dy;
       clampTranslation();
@@ -671,7 +719,10 @@
     });
 
     window.addEventListener('mouseup', () => {
-      if (dragState) mapContainer.classList.remove('grabbing');
+      if (dragState) {
+        mapContainer.classList.remove('grabbing');
+        mapContainer.classList.remove('dragging');
+      }
       dragState = null;
     });
 
@@ -679,6 +730,7 @@
     let touchState = null;
 
     mapContainer.addEventListener('touchstart', (e) => {
+      mapContainer.classList.add('dragging');
       if (e.touches.length === 1) {
         const t = e.touches[0];
         touchState = {
@@ -741,8 +793,10 @@
     }, { passive: false });
 
     window.addEventListener('touchend', (e) => {
-      if (e.touches.length === 0) touchState = null;
-      else if (e.touches.length === 1 && touchState && touchState.type === 'pinch') {
+      if (e.touches.length === 0) {
+        touchState = null;
+        mapContainer.classList.remove('dragging');
+      } else if (e.touches.length === 1 && touchState && touchState.type === 'pinch') {
         // Transition from pinch back to pan
         const t = e.touches[0];
         touchState = {
@@ -764,16 +818,47 @@
         if (name) {
           tooltip.style.display = 'block';
           tooltip.textContent = name;
-          tooltip.style.left = (e.clientX + 12) + 'px';
-          tooltip.style.top = (e.clientY - 10) + 'px';
+          tooltip.style.left = (e.clientX + 14) + 'px';
+          tooltip.style.top = (e.clientY - 12) + 'px';
+          // Force reflow on first show, then add class
+          if (!tooltip.classList.contains('visible')) {
+            tooltip.getBoundingClientRect();
+            tooltip.classList.add('visible');
+          }
         }
       } else {
-        tooltip.style.display = 'none';
+        tooltip.classList.remove('visible');
+        // Hide after transition completes
+        setTimeout(() => {
+          if (!tooltip.classList.contains('visible')) tooltip.style.display = 'none';
+        }, 150);
       }
     });
 
     mapContainer.addEventListener('mouseleave', () => {
-      tooltip.style.display = 'none';
+      tooltip.classList.remove('visible');
+      setTimeout(() => {
+        if (!tooltip.classList.contains('visible')) tooltip.style.display = 'none';
+      }, 150);
+    });
+
+    // --- Double-click to zoom in ---
+    mapContainer.addEventListener('dblclick', (e) => {
+      e.preventDefault();
+      const path = e.target.closest('path[data-name]');
+      if (path) return; // let single-click handle region toggling
+      zoomAt(state.zoom * 2, e.clientX, e.clientY);
+    });
+
+    // --- Keyboard shortcuts ---
+    window.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      if (e.key === '+' || e.key === '=') zoomCenter(1.5);
+      else if (e.key === '-' || e.key === '_') zoomCenter(1 / 1.5);
+      else if (e.key === '0') resetView();
+      else if (e.key === 'Escape') {
+        document.getElementById('shareModal').classList.remove('open');
+      }
     });
 
     // --- Click to color (suppress after drag) ---
@@ -789,13 +874,19 @@
 
       if (mapData[id] === state.selectedColor) {
         delete mapData[id];
-        path.style.fill = state.currentMap === 'us' ? '#2C2935' : '#252230';
+        path.style.fill = state.currentMap === 'us' ? '#2A2640' : '#232040';
         path.style.fillOpacity = '1';
       } else {
         mapData[id] = state.selectedColor;
         path.style.fill = tintColor(state.selectedColor, FILL_OPACITY);
         path.style.fillOpacity = '1';
       }
+
+      // Trigger click pulse animation
+      path.classList.remove('pulse');
+      path.offsetWidth; // force reflow
+      path.classList.add('pulse');
+      path.addEventListener('animationend', () => path.classList.remove('pulse'), { once: true });
 
       updateStats();
       saveToLocalStorage();
@@ -832,7 +923,7 @@
 
     // --- Load SVG maps ---
     async function loadMap(mapType) {
-      mapContainer.innerHTML = '<p style="color:var(--md-on-surface-variant); font-weight:500;">Loading map...</p>';
+      mapContainer.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;gap:12px;"><div style="width:24px;height:24px;border:2.5px solid var(--md-outline-variant);border-top-color:var(--md-primary);border-radius:50%;animation:spin 0.8s linear infinite;"></div><p style="color:var(--md-on-surface-variant);font-weight:500;">Loading map…</p></div>';
 
       try {
         let svgText;
@@ -866,13 +957,14 @@
         state.tx = 0;
         state.ty = 0;
 
-        // Set default fills — M3 dark surface tones
+        // Set default fills — refined dark tones with subtle warmth
         svg.querySelectorAll('path').forEach(path => {
-          const defaultFill = mapType === 'us' ? '#2C2935' : '#252230';
+          const defaultFill = mapType === 'us' ? '#2A2640' : '#232040';
           path.style.fill = defaultFill;
           path.style.fillOpacity = '1';
-          path.style.stroke = '#49454F';
-          path.style.strokeWidth = mapType === 'us' ? '0.8' : '0.5';
+          path.style.stroke = mapType === 'us' ? '#3D3856' : '#342F52';
+          path.style.strokeWidth = mapType === 'us' ? '1' : '0.5';
+          path.style.strokeLinejoin = 'round';
         });
 
         // Add state labels for US map
