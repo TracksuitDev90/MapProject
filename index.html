@@ -469,6 +469,117 @@
     .map-container svg path.pulse {
       animation: region-pulse 0.35s ease-out;
     }
+
+    /* --- Search bar below map --- */
+    .search-bar {
+      z-index: 10;
+      width: 100%;
+      flex-shrink: 0;
+      background: var(--md-surface-container);
+      border-top: 1px solid var(--md-outline-variant);
+      padding: 10px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      position: relative;
+    }
+
+    .search-bar label {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--md-on-surface-variant);
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .search-wrapper {
+      position: relative;
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .search-wrapper input {
+      width: 100%;
+      height: 40px;
+      padding: 0 16px;
+      border: 1px solid var(--md-outline-variant);
+      border-radius: var(--md-shape-full);
+      background: var(--md-surface-container-lowest);
+      color: var(--md-on-surface);
+      font-family: inherit;
+      font-size: 0.875rem;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .search-wrapper input:focus {
+      border-color: var(--md-primary);
+      box-shadow: 0 0 0 1px var(--md-primary);
+    }
+
+    .search-wrapper input::placeholder {
+      color: var(--md-outline);
+    }
+
+    .autocomplete-list {
+      position: absolute;
+      bottom: 100%;
+      left: 0;
+      right: 0;
+      background: var(--md-surface-container-high);
+      border: 1px solid var(--md-outline-variant);
+      border-radius: var(--md-shape-md);
+      max-height: 240px;
+      overflow-y: auto;
+      display: none;
+      z-index: 50;
+      box-shadow: 0 -4px 12px rgba(0,0,0,0.12);
+      margin-bottom: 6px;
+    }
+
+    .autocomplete-list.open {
+      display: block;
+    }
+
+    .autocomplete-item {
+      padding: 10px 16px;
+      font-size: 0.8125rem;
+      color: var(--md-on-surface);
+      cursor: pointer;
+      transition: background 0.12s;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .autocomplete-item:first-child {
+      border-radius: var(--md-shape-md) var(--md-shape-md) 0 0;
+    }
+
+    .autocomplete-item:last-child {
+      border-radius: 0 0 var(--md-shape-md) var(--md-shape-md);
+    }
+
+    .autocomplete-item:hover,
+    .autocomplete-item.active {
+      background: var(--md-primary-container);
+      color: var(--md-on-primary-container);
+    }
+
+    .autocomplete-item .item-id {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      color: var(--md-outline);
+      min-width: 32px;
+    }
+
+    .autocomplete-item.active .item-id,
+    .autocomplete-item:hover .item-id {
+      color: var(--md-on-primary-container);
+      opacity: 0.7;
+    }
   </style>
 </head>
 <body>
@@ -511,6 +622,14 @@
 
   <div class="map-container" id="mapContainer"></div>
 
+  <div class="search-bar">
+    <label>Search</label>
+    <div class="search-wrapper">
+      <input type="text" id="regionSearch" placeholder="Type a state or country name..." autocomplete="off">
+      <div class="autocomplete-list" id="autocompleteList"></div>
+    </div>
+  </div>
+
   <div class="zoom-controls">
     <button id="zoomIn" title="Zoom in">+</button>
     <button id="zoomOut" title="Zoom out">&minus;</button>
@@ -542,7 +661,7 @@
     // =============================================
     // State label positions (SVG coordinate space)
     // =============================================
-    const US_LABEL_POSITIONS = {"MA":{"x":938.6,"y":137.3},"MN":{"x":600,"y":125},"MT":{"x":386.3,"y":103.9},"ND":{"x":517.3,"y":104.7},"HI":{"x":375,"y":520},"ID":{"x":314.3,"y":147.8},"WA":{"x":243.3,"y":71.0},"AZ":{"x":321.2,"y":361.7},"CA":{"x":210,"y":310},"CO":{"x":432.4,"y":273.5},"NV":{"x":259.8,"y":268.7},"NM":{"x":418.2,"y":368.0},"OR":{"x":224.9,"y":136.1},"UT":{"x":338.7,"y":260.3},"WY":{"x":407.9,"y":190.1},"AR":{"x":650.1,"y":357.2},"IA":{"x":620.9,"y":211.2},"KS":{"x":548.7,"y":286.6},"MO":{"x":652.5,"y":293.9},"NE":{"x":526.9,"y":228.9},"OK":{"x":555,"y":345.4},"SD":{"x":517.7,"y":169.9},"LA":{"x":655,"y":420},"TX":{"x":520.3,"y":434.3},"CT":{"x":938,"y":158},"NH":{"x":933,"y":105},"RI":{"x":950,"y":167},"VT":{"x":909,"y":110},"AL":{"x":750.7,"y":388.6},"FL":{"x":840,"y":460},"GA":{"x":805.2,"y":376.2},"MS":{"x":696.7,"y":394.7},"SC":{"x":839.4,"y":351.1},"IL":{"x":680,"y":252},"IN":{"x":735.3,"y":247.1},"KY":{"x":760,"y":290.0},"NC":{"x":852,"y":308},"OH":{"x":784.7,"y":224.2},"TN":{"x":750.8,"y":321.3},"VA":{"x":850,"y":272},"WI":{"x":664.2,"y":151.8},"WV":{"x":832,"y":250},"DE":{"x":903,"y":218},"DC":{"x":880,"y":243},"MD":{"x":900,"y":238},"NJ":{"x":915,"y":210},"NY":{"x":893,"y":145},"PA":{"x":867,"y":194.0},"ME":{"x":952.8,"y":75},"MI":{"x":740,"y":170},"AK":{"x":161.1,"y":497.8}};
+    const US_LABEL_POSITIONS = {"MA":{"x":938.6,"y":137.3},"MN":{"x":600,"y":125},"MT":{"x":386.3,"y":103.9},"ND":{"x":517.3,"y":104.7},"HI":{"x":375,"y":520},"ID":{"x":314.3,"y":147.8},"WA":{"x":243.3,"y":71.0},"AZ":{"x":321.2,"y":361.7},"CA":{"x":210,"y":310},"CO":{"x":432.4,"y":273.5},"NV":{"x":259.8,"y":268.7},"NM":{"x":418.2,"y":368.0},"OR":{"x":224.9,"y":136.1},"UT":{"x":338.7,"y":260.3},"WY":{"x":407.9,"y":190.1},"AR":{"x":650.1,"y":357.2},"IA":{"x":620.9,"y":211.2},"KS":{"x":548.7,"y":286.6},"MO":{"x":652.5,"y":293.9},"NE":{"x":526.9,"y":228.9},"OK":{"x":555,"y":345.4},"SD":{"x":517.7,"y":169.9},"LA":{"x":655,"y":420},"TX":{"x":520.3,"y":434.3},"CT":{"x":938,"y":158},"NH":{"x":933,"y":105},"RI":{"x":950,"y":167},"VT":{"x":909,"y":110},"AL":{"x":750.7,"y":388.6},"FL":{"x":847,"y":460},"GA":{"x":805.2,"y":376.2},"MS":{"x":696.7,"y":394.7},"SC":{"x":839.4,"y":351.1},"IL":{"x":680,"y":252},"IN":{"x":735.3,"y":247.1},"KY":{"x":760,"y":290.0},"NC":{"x":852,"y":308},"OH":{"x":784.7,"y":224.2},"TN":{"x":750.8,"y":321.3},"VA":{"x":850,"y":272},"WI":{"x":664.2,"y":151.8},"WV":{"x":832,"y":250},"DE":{"x":903,"y":218},"DC":{"x":880,"y":243},"MD":{"x":900,"y":238},"NJ":{"x":915,"y":210},"NY":{"x":893,"y":145},"PA":{"x":867,"y":194.0},"ME":{"x":952.8,"y":75},"MI":{"x":740,"y":170},"AK":{"x":161.1,"y":497.8}};
 
     const FILL_OPACITY = 0.45;
 
@@ -597,6 +716,8 @@
         document.querySelectorAll('.map-tabs button').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         state.currentMap = btn.dataset.map;
+        regionSearch.value = '';
+        regionSearch.placeholder = btn.dataset.map === 'us' ? 'Type a state name...' : 'Type a country name...';
         loadMap(btn.dataset.map);
       });
     });
@@ -961,8 +1082,8 @@
           const defaultFill = mapType === 'us' ? '#F3EDF7' : '#EDE7F2';
           path.style.fill = defaultFill;
           path.style.fillOpacity = '1';
-          path.style.stroke = mapType === 'us' ? '#CAC4D0' : '#B8B0C0';
-          path.style.strokeWidth = mapType === 'us' ? '1' : '0.5';
+          path.style.stroke = mapType === 'us' ? '#8E8895' : '#7A7388';
+          path.style.strokeWidth = mapType === 'us' ? '1' : '0.8';
           path.style.strokeLinejoin = 'round';
           path.setAttribute('vector-effect', 'non-scaling-stroke');
         });
@@ -1082,6 +1203,163 @@
       loadFromLocalStorage();
     }
     loadMap('us');
+
+    // =============================================
+    // Search with autocomplete
+    // =============================================
+    const regionSearch = document.getElementById('regionSearch');
+    const autocompleteList = document.getElementById('autocompleteList');
+    let acItems = []; // current autocomplete items [{id, name}]
+    let acIndex = -1; // highlighted index
+
+    function getRegionsFromSvg() {
+      const svg = mapContainer.querySelector('svg');
+      if (!svg) return [];
+      const regions = [];
+      svg.querySelectorAll('path[data-name]').forEach(path => {
+        const id = path.id || path.getAttribute('data-id');
+        const name = path.getAttribute('data-name');
+        if (id && name) regions.push({ id, name });
+      });
+      // Deduplicate by id (some SVGs may have multiple paths per region)
+      const seen = new Set();
+      return regions.filter(r => {
+        if (seen.has(r.id)) return false;
+        seen.add(r.id);
+        return true;
+      });
+    }
+
+    function filterRegions(query) {
+      if (!query.trim()) return [];
+      const q = query.toLowerCase();
+      const regions = getRegionsFromSvg();
+      return regions
+        .filter(r => r.name.toLowerCase().includes(q) || r.id.toLowerCase().includes(q))
+        .sort((a, b) => {
+          // Prioritize starts-with matches
+          const aStarts = a.name.toLowerCase().startsWith(q) ? 0 : 1;
+          const bStarts = b.name.toLowerCase().startsWith(q) ? 0 : 1;
+          if (aStarts !== bStarts) return aStarts - bStarts;
+          return a.name.localeCompare(b.name);
+        })
+        .slice(0, 12);
+    }
+
+    function renderAutocomplete(items) {
+      acItems = items;
+      acIndex = -1;
+      if (items.length === 0) {
+        autocompleteList.classList.remove('open');
+        autocompleteList.innerHTML = '';
+        return;
+      }
+      autocompleteList.innerHTML = items.map((item, i) =>
+        `<div class="autocomplete-item" data-index="${i}">
+          <span class="item-id">${item.id}</span>
+          <span>${item.name}</span>
+        </div>`
+      ).join('');
+      autocompleteList.classList.add('open');
+    }
+
+    function selectRegion(regionId) {
+      const svg = mapContainer.querySelector('svg');
+      if (!svg) return;
+
+      // Find the path(s) for this region
+      const paths = svg.querySelectorAll(`#${CSS.escape(regionId)}`);
+      if (paths.length === 0) return;
+
+      const mapData = state.visited[state.currentMap];
+
+      // Always fill with the currently selected color
+      mapData[regionId] = state.selectedColor;
+      paths.forEach(p => {
+        p.style.fill = tintColor(state.selectedColor, FILL_OPACITY);
+        p.style.fillOpacity = '1';
+        // Trigger pulse animation
+        p.classList.remove('pulse');
+        p.offsetWidth;
+        p.classList.add('pulse');
+        p.addEventListener('animationend', () => p.classList.remove('pulse'), { once: true });
+      });
+
+      updateStats();
+      saveToLocalStorage();
+
+      // Clear search
+      regionSearch.value = '';
+      autocompleteList.classList.remove('open');
+      autocompleteList.innerHTML = '';
+    }
+
+    regionSearch.addEventListener('input', () => {
+      const items = filterRegions(regionSearch.value);
+      renderAutocomplete(items);
+    });
+
+    regionSearch.addEventListener('keydown', (e) => {
+      if (!autocompleteList.classList.contains('open') || acItems.length === 0) {
+        if (e.key === 'Escape') {
+          regionSearch.blur();
+          autocompleteList.classList.remove('open');
+        }
+        return;
+      }
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        acIndex = Math.min(acIndex + 1, acItems.length - 1);
+        highlightItem();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        acIndex = Math.max(acIndex - 1, 0);
+        highlightItem();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (acIndex >= 0 && acIndex < acItems.length) {
+          selectRegion(acItems[acIndex].id);
+        } else if (acItems.length > 0) {
+          selectRegion(acItems[0].id);
+        }
+      } else if (e.key === 'Escape') {
+        autocompleteList.classList.remove('open');
+        regionSearch.blur();
+      }
+    });
+
+    function highlightItem() {
+      autocompleteList.querySelectorAll('.autocomplete-item').forEach((el, i) => {
+        el.classList.toggle('active', i === acIndex);
+        if (i === acIndex) el.scrollIntoView({ block: 'nearest' });
+      });
+    }
+
+    autocompleteList.addEventListener('click', (e) => {
+      const item = e.target.closest('.autocomplete-item');
+      if (!item) return;
+      const idx = parseInt(item.dataset.index);
+      if (acItems[idx]) selectRegion(acItems[idx].id);
+    });
+
+    // Close autocomplete when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.search-wrapper')) {
+        autocompleteList.classList.remove('open');
+      }
+    });
+
+    // Re-show autocomplete on focus if there's text
+    regionSearch.addEventListener('focus', () => {
+      if (regionSearch.value.trim()) {
+        const items = filterRegions(regionSearch.value);
+        renderAutocomplete(items);
+      }
+    });
+
+    // Update placeholder text when map changes
+    const origLoadMap = loadMap;
   </script>
 </body>
 </html>
