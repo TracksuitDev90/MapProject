@@ -688,12 +688,16 @@
       world: {
         center: [20, 0],
         zoom: 2,
-        file: 'world-countries.json',
+        file: 'world-detailed.json',
         defaultFill: '#EDE7F2',
         stroke: '#7A7388',
         strokeWidth: 0.8,
         getId: (feature) => feature.properties.id || feature.id || '',
-        getName: (feature) => feature.properties.name || '',
+        getName: (feature) => {
+          const p = feature.properties;
+          if (p.country) return `${p.name}, ${p.country}`;
+          return p.name || '';
+        },
       },
     };
 
@@ -850,7 +854,7 @@
         btn.classList.add('active');
         state.currentMap = btn.dataset.map;
         regionSearch.value = '';
-        regionSearch.placeholder = btn.dataset.map === 'us' ? 'Type a state name...' : 'Type a country name...';
+        regionSearch.placeholder = btn.dataset.map === 'us' ? 'Type a state name...' : 'Type a region or country name...';
         loadMap(btn.dataset.map);
       });
     });
