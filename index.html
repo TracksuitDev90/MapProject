@@ -763,7 +763,7 @@
             const name = config.getName(feature);
 
             if (id && name) {
-              allRegions.push({ id, name, layer });
+              allRegions.push({ id, name, layer, feature });
             }
 
             // Tooltip
@@ -1001,14 +1001,16 @@
       if (!region) return;
 
       const mapData = state.visited[state.currentMap];
-      mapData[regionId] = state.selectedColor;
 
-      // Update the layer style
-      const config = MAP_CONFIG[state.currentMap];
-      region.layer.setStyle({
-        fillColor: tintColor(state.selectedColor, FILL_OPACITY),
-        fillOpacity: 1,
-      });
+      // Toggle logic: remove if already marked with same color, otherwise set
+      if (mapData[regionId] === state.selectedColor) {
+        delete mapData[regionId];
+      } else {
+        mapData[regionId] = state.selectedColor;
+      }
+
+      // Update the layer style consistently with map click behavior
+      region.layer.setStyle(getRegionStyle(region.feature, state.currentMap));
 
       // Zoom to the region
       map.fitBounds(region.layer.getBounds(), { maxZoom: 6, padding: [50, 50] });
