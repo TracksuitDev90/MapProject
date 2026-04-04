@@ -415,19 +415,23 @@
       100% { filter: brightness(1) saturate(1); }
     }
 
-    /* --- Search bar below map --- */
+    /* --- Search bar floating above bottom of map --- */
     .search-bar {
       z-index: 1000;
-      width: 100%;
-      flex-shrink: 0;
+      position: absolute;
+      bottom: 48px;
+      left: 50%;
+      transform: translateX(-50%);
       background: var(--md-surface-container);
-      border-top: 1px solid var(--md-outline-variant);
-      padding: 10px 24px;
+      border: 1px solid var(--md-outline-variant);
+      border-radius: var(--md-shape-xl);
+      padding: 8px 20px;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 10px;
-      position: relative;
+      box-shadow: 0 2px 8px 2px rgba(0,0,0,0.12);
+      pointer-events: auto;
     }
 
     .search-bar label {
@@ -587,13 +591,12 @@
       <div style="width:24px;height:24px;border:2.5px solid var(--md-outline-variant);border-top-color:var(--md-primary);border-radius:50%;animation:spin 0.8s linear infinite;"></div>
       <p style="color:var(--md-on-surface-variant);font-weight:500;">Loading map&hellip;</p>
     </div>
-  </div>
-
-  <div class="search-bar">
-    <label>Search</label>
-    <div class="search-wrapper">
-      <input type="text" id="regionSearch" placeholder="Type a state or country name..." autocomplete="off">
-      <div class="autocomplete-list" id="autocompleteList"></div>
+    <div class="search-bar">
+      <label>Search</label>
+      <div class="search-wrapper">
+        <input type="text" id="regionSearch" placeholder="Type a state or country name..." autocomplete="off">
+        <div class="autocomplete-list" id="autocompleteList"></div>
+      </div>
     </div>
   </div>
 
@@ -878,6 +881,106 @@
     // =============================================
     // Share / Save
     // =============================================
+    // Color palette for compact URL encoding
+    const COLOR_PALETTE = ['#7C4DFF', '#E91E63', '#2979FF', '#00C853', '#FF9100', '#00BCD4'];
+
+    // Build compact string: groups regions by color, uses short palette indices
+    // Format: u0:CA,TX,NY-w1:GBR,FRA (u=us, w=world, 0-5=palette index, cHEX=custom)
+    function buildCompactState() {
+      const parts = [];
+      for (const [mapType, visited] of Object.entries(state.visited)) {
+        if (Object.keys(visited).length === 0) continue;
+        const prefix = mapType === 'us' ? 'u' : 'w';
+        const byColor = {};
+        for (const [regionId, color] of Object.entries(visited)) {
+          if (!byColor[color]) byColor[color] = [];
+          byColor[color].push(regionId);
+        }
+        for (const [color, regions] of Object.entries(byColor)) {
+          const idx = COLOR_PALETTE.findIndex(c => c.toLowerCase() === color.toLowerCase());
+          const colorCode = idx >= 0 ? String(idx) : 'c' + color.replace('#', '');
+          parts.push(prefix + colorCode + ':' + regions.join(','));
+        }
+      }
+      return parts.join('-');
+    }
+
+    function parseCompactState(compact) {
+      if (!compact) return null;
+      const result = { us: {}, world: {} };
+      const parts = compact.split('-');
+      for (const part of parts) {
+        if (part.length < 3) return null;
+        const mapType = part[0] === 'u' ? 'us' : part[0] === 'w' ? 'world' : null;
+        if (!mapType) return null;
+        const colonIdx = part.indexOf(':');
+        if (colonIdx < 2) return null;
+        const colorCode = part.substring(1, colonIdx);
+        const regions = part.substring(colonIdx + 1).split(',').filter(Boolean);
+        let color;
+        if (colorCode.length === 1 && colorCode >= '0' && colorCode <= '5') {
+          color = COLOR_PALETTE[parseInt(colorCode)];
+        } else if (colorCode.startsWith('c') && colorCode.length === 7) {
+          color = '#' + colorCode.substring(1);
+        } else {
+          return null;
+        }
+        for (const r of regions) result[mapType][r] = color;
+      }
+      return result;
+    }
+
+    // Compress string with deflate-raw, return URL-safe base64
+    async function compressString(str) {
+      const stream = new Blob([new TextEncoder().encode(str)]).stream()
+        .pipeThrough(new CompressionStream('deflate-raw'));
+      const buf = await new Response(stream).arrayBuffer();
+      return btoa(String.fromCharCode(...new Uint8Array(buf)))
+        .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    }
+
+    async function decompressString(b64) {
+      const padded = b64.replace(/-/g, '+').replace(/_/g, '/');
+      const bytes = Uint8Array.from(atob(padded), c => c.charCodeAt(0));
+      const stream = new Blob([bytes]).stream()
+        .pipeThrough(new DecompressionStream('deflate-raw'));
+      return await new Response(stream).text();
+    }
+
+    // Encode state: compact format + optional deflate compression
+    async function encodeStateCompact() {
+      const compact = buildCompactState();
+      if (!compact) return '';
+      try {
+        const compressed = await compressString(compact);
+        // Use whichever is shorter
+        return compressed.length < compact.length ? 'z' + compressed : compact;
+      } catch {
+        return compact;
+      }
+    }
+
+    // Decode state: supports compressed (z-prefix), compact, and legacy JSON base64
+    async function decodeStateAny(encoded) {
+      if (!encoded) return null;
+      // Compressed compact format (z prefix)
+      if (encoded.startsWith('z')) {
+        try {
+          const decompressed = await decompressString(encoded.substring(1));
+          return parseCompactState(decompressed);
+        } catch { return null; }
+      }
+      // Uncompressed compact format (starts with u or w)
+      if (encoded.startsWith('u') || encoded.startsWith('w')) {
+        return parseCompactState(encoded);
+      }
+      // Legacy base64 JSON format
+      try {
+        return JSON.parse(atob(encoded));
+      } catch { return null; }
+    }
+
+    // Legacy encode for backwards compat (still used for localStorage)
     function encodeState() {
       const data = {};
       for (const [mapType, visited] of Object.entries(state.visited)) {
@@ -886,14 +989,6 @@
         }
       }
       return btoa(JSON.stringify(data));
-    }
-
-    function decodeState(encoded) {
-      try {
-        return JSON.parse(atob(encoded));
-      } catch {
-        return null;
-      }
     }
 
     function saveToLocalStorage() {
@@ -911,11 +1006,11 @@
       }
     }
 
-    function loadFromUrl() {
+    async function loadFromUrl() {
       const params = new URLSearchParams(window.location.search);
-      const data = params.get('data');
+      const data = params.get('s') || params.get('data');
       if (data) {
-        const decoded = decodeState(data);
+        const decoded = await decodeStateAny(data);
         if (decoded) {
           if (decoded.us) state.visited.us = decoded.us;
           if (decoded.world) state.visited.world = decoded.world;
@@ -925,9 +1020,9 @@
       return false;
     }
 
-    document.getElementById('shareBtn').addEventListener('click', () => {
-      const encoded = encodeState();
-      const url = window.location.origin + window.location.pathname + '?data=' + encoded;
+    document.getElementById('shareBtn').addEventListener('click', async () => {
+      const encoded = await encodeStateCompact();
+      const url = window.location.origin + window.location.pathname + '?s=' + encoded;
       document.getElementById('shareUrl').value = url;
       document.getElementById('shareModal').classList.add('open');
     });
@@ -1093,11 +1188,13 @@
     // =============================================
     // Init
     // =============================================
-    const loadedFromUrl = loadFromUrl();
-    if (!loadedFromUrl) {
-      loadFromLocalStorage();
-    }
-    loadMap('us');
+    (async () => {
+      const loadedFromUrl = await loadFromUrl();
+      if (!loadedFromUrl) {
+        loadFromLocalStorage();
+      }
+      loadMap('us');
+    })();
   </script>
 </body>
 </html>
